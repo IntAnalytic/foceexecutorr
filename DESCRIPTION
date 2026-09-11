@@ -1,0 +1,25 @@
+Package: foceexecutorR
+Title: Execute a Signed Population-PK Model Descriptor Against a Pluggable Backend
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Intelligent", "Analytics", role = c("aut", "cre"),
+           email = "sahmed_ai@intanalytic.com"),
+    person("Intelligent Analytics", role = "cph"))
+Description: Takes the signed 'model.json' descriptor emitted by the sentinel-poppk
+    workflow at report sign-off and executes the model it specifies against a
+    pluggable estimation backend. Backends are registered rather than hard-coded,
+    so the same descriptor can be run against a fast approximate estimator for a
+    preview or against NONMEM for an official result. This package owns execution
+    only: assembling data, imputation and BLQ handling, and organising outputs are
+    the orchestrator's job, not this one.
+License: Apache License (== 2.0) | file LICENSE
+Encoding: UTF-8
+Language: en-GB
+URL: https://github.com/IntAnalytic/foceexecutorR
+BugReports: https://github.com/IntAnalytic/foceexecutorR/issues
+Depends: R (>= 4.1)
+Imports: jsonlite
+Suggests: testthat (>= 3.0.0), knitr, rmarkdown
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0

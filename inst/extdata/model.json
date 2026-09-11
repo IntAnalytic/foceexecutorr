@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "run_id": "demo-2cmt-wt-age-signed",
+  "project_id": "poppk-demo",
+  "parent_run_id": null,
+  "dataset_path": "poppk_phase1_demo",
+  "structural_selection": {
+    "submitted_models": [
+      {
+        "model_id": "1cmt",
+        "label": "1-compartment",
+        "compartments": 1,
+        "error_model": "combined",
+        "covariates": [
+          "weight",
+          "age"
+        ],
+        "estimation_method": "FOCE-I",
+        "seed": 1,
+        "force_outcome": null
+      },
+      {
+        "model_id": "2cmt",
+        "label": "2-compartment",
+        "compartments": 2,
+        "error_model": "combined",
+        "covariates": [
+          "weight",
+          "age"
+        ],
+        "estimation_method": "FOCE-I",
+        "seed": 7,
+        "force_outcome": "converge"
+      }
+    ],
+    "spec_fingerprint": "d4f855458eb2e89d0121245a3fa948aa80ec8181c718e4efc8648b56b18f9db1",
+    "chosen_model_id": "2cmt",
+    "recommended_model_id": "2cmt",
+    "accepted_recommendation": true,
+    "actor": "Safi Ahmed",
+    "rationale": "2-compartment fits the distribution phase.",
+    "decided_at": "2026-09-11T10:00:00+00:00"
+  },
+  "covariate_search": null,
+  "parameters": [],
+  "acceptance": {
+    "max_dofv_threshold": -3.84,
+    "max_rse_pct": 50.0,
+    "max_shrinkage_pct": 30.0,
+    "max_condition_number": 1000.0,
+    "min_vpc_coverage_pct": 90.0,
+    "npde_p_threshold": 0.05
+  },
+  "qualification": null,
+  "data_handling": {
+    "run_id": "demo-2cmt-wt-age-signed",
+    "total_n": 12,
+    "effective_n": 12,
+    "blq_method": null,
+    "imputations": [],
+    "exclusions": [],
+    "overrides": [],
+    "resolutions": []
+  },
+  "sign_off": {
+    "session": 1,
+    "actor": "Safi Ahmed",
+    "rationale": "Reviewed and accepted.",
+    "methods": "M",
+    "results": "R",
+    "conclusion": "C",
+    "decided_at": "2026-09-11T10:05:00+00:00",
+    "ai_methods": null,
+    "ai_results": null,
+    "ai_conclusion": null,
+    "advisory_source": null,
+    "methods_source": null,
+    "methods_status": null,
+    "results_source": null,
+    "results_status": null,
+    "conclusion_source": null,
+    "conclusion_status": null
+  },
+  "lineage_path": "lineage.jsonl"
+}

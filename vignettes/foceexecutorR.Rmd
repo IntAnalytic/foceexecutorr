@@ -1,0 +1,98 @@
+---
+title: "Executing a signed descriptor"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Executing a signed descriptor}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+```{r setup}
+library(foceexecutorR)
+```
+
+## What this package is for
+
+A population-PK analysis run in `sentinel-poppk` ends with a human signing a
+report. At that moment the application writes `model.json`: a signed, durable
+description of what was decided — every candidate model as submitted, which one
+was chosen and why, the fitted parameters, the accepted data-handling, and the
+attestation itself.
+
+That file is the handover. This package reads it and runs the model it names.
+
+## Reading a descriptor
+
+```{r}
+path <- system.file("extdata", "model.json", package = "foceexecutorR")
+d <- read_descriptor(path)
+d
+```
+
+A descriptor is self-contained by design: an executor never calls back into the
+application that produced it. That is why the file carries the *whole* submitted
+tuple rather than only the winner — the fingerprint covers the tuple, and
+replaying one model in isolation does not reproduce the numbers the original run
+produced.
+
+```{r}
+chosen_model(d)$model_id
+length(d$structural_selection$submitted_models)
+```
+
+## Running it
+
+```{r}
+res <- execute(d, backend = "inspect")
+res
+```
+
+`inspect` is the only backend that ships, and it estimates nothing. That is
+deliberate: the two intended backends are an approximate FOCE estimator and
+NONMEM, and neither can be assumed present — NONMEM needs a licence. A stub that
+returned invented parameter estimates would be indistinguishable from a real fit
+to everything downstream, so the shipped default runs nothing and says so.
+
+```{r}
+res$result$executed
+res$result$would_run$compartments
+```
+
+## Why `official` is not a detail
+
+```{r}
+backends()
+```
+
+Every backend declares whether its results may be treated as official, and
+`execute()` reads that from the registration — never from what the backend
+returns.
+
+The reason is specific. Once two engines can both produce plausible parameter
+estimates, a table of numbers no longer tells you which one you are looking at. A
+fast approximate fit used to guide a decision and a qualified NONMEM run used to
+support a submission are different things, and the difference is invisible at the
+point where it matters most. So the executor attaches the label, from a flag the
+backend had to state when it registered, and the default for anything unstated is
+"not official".
+
+## Registering a real backend
+
+```{r, eval = FALSE}
+register_backend(
+  "nonmem",
+  run = function(descriptor, model, data_path, ...) {
+    # compile the descriptor to a control stream, invoke NONMEM, parse results
+  },
+  official = TRUE,
+  description = "NONMEM 7.5 via PsN"
+)
+```
+
+The backend is handed the descriptor *and* the already-resolved chosen model, so
+it never re-implements descriptor parsing — one reader, one place where the
+schema is understood.
