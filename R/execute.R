@@ -19,7 +19,7 @@
 #' @param ... Passed to the backend.
 #' @return An object of class `focex_result`.
 #' @examples
-#' d <- system.file("extdata", "model.json", package = "foceexecutorR")
+#' d <- system.file("extdata", "model.json", package = "foceexecutorr")
 #' res <- execute(d)
 #' res$official
 #' @export

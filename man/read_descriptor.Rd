@@ -31,7 +31,7 @@ is checked is the thing that actually goes wrong in practice: being handed a
 descriptor from a schema version this package predates.
 }
 \examples{
-path <- system.file("extdata", "model.json", package = "foceexecutorR")
+path <- system.file("extdata", "model.json", package = "foceexecutorr")
 d <- read_descriptor(path)
 d$run_id
 }

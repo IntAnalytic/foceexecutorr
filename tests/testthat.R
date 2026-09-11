@@ -1,4 +1,4 @@
 library(testthat)
-library(foceexecutorR)
+library(foceexecutorr)
 
-test_check("foceexecutorR")
+test_check("foceexecutorr")

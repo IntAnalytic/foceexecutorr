@@ -34,7 +34,7 @@ that says which one you are looking at. The label is attached here, by this
 function, from the backend's own registration -- never supplied by the caller.
 }
 \examples{
-d <- system.file("extdata", "model.json", package = "foceexecutorR")
+d <- system.file("extdata", "model.json", package = "foceexecutorr")
 res <- execute(d)
 res$official
 }

@@ -1,4 +1,4 @@
-fixture <- function() system.file("extdata", "model.json", package = "foceexecutorR")
+fixture <- function() system.file("extdata", "model.json", package = "foceexecutorr")
 
 test_that("execute accepts a path or a descriptor and reports both ways the same", {
   from_path <- execute(fixture())

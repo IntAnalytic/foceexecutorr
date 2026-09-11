@@ -1,4 +1,4 @@
-# foceexecutorR
+# foceexecutorr
 
 Execute a signed population-PK model descriptor against a pluggable estimation backend.
 
@@ -21,7 +21,7 @@ given machine.
 ## Usage
 
 ```r
-library(foceexecutorR)
+library(foceexecutorr)
 
 d <- read_descriptor("model.json")
 d

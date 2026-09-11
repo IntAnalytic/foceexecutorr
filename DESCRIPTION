@@ -1,4 +1,4 @@
-Package: foceexecutorR
+Package: foceexecutorr
 Title: Execute a Signed Population-PK Model Descriptor Against a Pluggable Backend
 Version: 0.0.0.9000
 Authors@R: c(
@@ -15,8 +15,8 @@ Description: Takes the signed 'model.json' descriptor emitted by the sentinel-po
 License: Apache License (== 2.0) | file LICENSE
 Encoding: UTF-8
 Language: en-GB
-URL: https://github.com/IntAnalytic/foceexecutorR
-BugReports: https://github.com/IntAnalytic/foceexecutorR/issues
+URL: https://github.com/IntAnalytic/foceexecutorr
+BugReports: https://github.com/IntAnalytic/foceexecutorr/issues
 Depends: R (>= 4.1)
 Imports: jsonlite
 Suggests: testthat (>= 3.0.0), knitr, rmarkdown

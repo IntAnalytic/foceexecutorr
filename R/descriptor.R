@@ -20,7 +20,7 @@
 #'   source path attached.
 #' @seealso [chosen_model()] to resolve which model it selected, [execute()] to run it.
 #' @examples
-#' path <- system.file("extdata", "model.json", package = "foceexecutorR")
+#' path <- system.file("extdata", "model.json", package = "foceexecutorr")
 #' d <- read_descriptor(path)
 #' d$run_id
 #' @export
@@ -40,7 +40,7 @@ read_descriptor <- function(path) {
   }
   if (!identical(raw$schema_version, SUPPORTED_SCHEMA_VERSION)) {
     stop("descriptor is schema version ", raw$schema_version, "; this package supports ",
-         SUPPORTED_SCHEMA_VERSION, ". Upgrade foceexecutorR rather than editing the descriptor -- ",
+         SUPPORTED_SCHEMA_VERSION, ". Upgrade foceexecutorr rather than editing the descriptor -- ",
          "it is a signed record.", call. = FALSE)
   }
   structure(c(raw, list(.source = path)), class = "focex_descriptor")
@@ -85,7 +85,7 @@ print.focex_descriptor <- function(x, ...) {
 #' @param descriptor A `focex_descriptor` from [read_descriptor()].
 #' @return A list describing the chosen model.
 #' @examples
-#' d <- read_descriptor(system.file("extdata", "model.json", package = "foceexecutorR"))
+#' d <- read_descriptor(system.file("extdata", "model.json", package = "foceexecutorr"))
 #' chosen_model(d)$model_id
 #' @export
 chosen_model <- function(descriptor) {

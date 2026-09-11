@@ -12,7 +12,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
 ```{r setup}
-library(foceexecutorR)
+library(foceexecutorr)
 ```
 
 ## What this package is for
@@ -28,7 +28,7 @@ That file is the handover. This package reads it and runs the model it names.
 ## Reading a descriptor
 
 ```{r}
-path <- system.file("extdata", "model.json", package = "foceexecutorR")
+path <- system.file("extdata", "model.json", package = "foceexecutorr")
 d <- read_descriptor(path)
 d
 ```

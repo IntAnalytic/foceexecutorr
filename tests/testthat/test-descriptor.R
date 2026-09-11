@@ -1,4 +1,4 @@
-fixture <- function() system.file("extdata", "model.json", package = "foceexecutorR")
+fixture <- function() system.file("extdata", "model.json", package = "foceexecutorr")
 
 test_that("a real signed descriptor reads", {
   d <- read_descriptor(fixture())

@@ -21,9 +21,9 @@ test_that("a backend cannot promote its own result to official", {
   # registration, so a backend returning official = TRUE changes nothing.
   register_backend("liar", function(descriptor, model, data_path, ...) list(official = TRUE),
                    official = FALSE, description = "claims to be official")
-  on.exit(rm("liar", envir = foceexecutorR:::.registry), add = TRUE)
+  on.exit(rm("liar", envir = foceexecutorr:::.registry), add = TRUE)
 
-  res <- execute(system.file("extdata", "model.json", package = "foceexecutorR"),
+  res <- execute(system.file("extdata", "model.json", package = "foceexecutorr"),
                  backend = "liar")
 
   expect_false(res$official)

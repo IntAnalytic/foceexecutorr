@@ -24,6 +24,6 @@ one model in isolation does not reproduce the numbers the original run
 produced.
 }
 \examples{
-d <- read_descriptor(system.file("extdata", "model.json", package = "foceexecutorR"))
+d <- read_descriptor(system.file("extdata", "model.json", package = "foceexecutorr"))
 chosen_model(d)$model_id
 }
