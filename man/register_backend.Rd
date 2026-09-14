@@ -4,7 +4,13 @@
 \alias{register_backend}
 \title{Register an estimation backend}
 \usage{
-register_backend(name, run, official = FALSE, description = "")
+register_backend(
+  name,
+  run,
+  official = FALSE,
+  description = "",
+  overwrite = FALSE
+)
 }
 \arguments{
 \item{name}{Short identifier, e.g. `"nonmem"`.}
@@ -20,6 +26,15 @@ parameter estimates, and nothing downstream can tell them apart unless the
 backend says which it is. Anything unstated is unofficial.}
 
 \item{description}{One line, shown by [backends()].}
+
+\item{overwrite}{Must be `TRUE` to replace an already-registered `name`.
+**Defaults to `FALSE` and errors on collision** -- silently replacing an
+existing backend is exactly how a trusted `official = FALSE` registration
+(the built-in `"inspect"` backend, for instance) would get quietly swapped
+for one claiming `official = TRUE`, with every default `execute()` call
+reporting official results afterwards. Replacing a backend on purpose is
+legitimate; doing it by name collision is not, and this makes the two
+distinguishable.}
 }
 \value{
 Invisibly, the registered name.

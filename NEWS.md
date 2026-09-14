@@ -14,3 +14,8 @@ contract the rest will be built against.
 * A built-in `"inspect"` backend that runs no estimation and reports what *would*
   be executed. It exists so the package is testable and demonstrable with no
   NONMEM licence and no estimator present.
+* `register_backend()` now refuses to replace an already-registered name unless
+  `overwrite = TRUE` is passed explicitly. Without this, re-registering
+  `"inspect"` under its own name with `official = TRUE` silently overwrote the
+  trusted built-in and every default `execute()` call reported official
+  results afterwards.

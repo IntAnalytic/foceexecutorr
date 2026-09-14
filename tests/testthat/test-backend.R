@@ -16,6 +16,25 @@ test_that("an unknown backend names the ones that exist", {
   expect_error(resolve_backend("nonmem"), "inspect")
 })
 
+test_that("registering an existing name errors unless overwrite = TRUE", {
+  expect_error(
+    register_backend("inspect", function(...) NULL, official = TRUE),
+    "already registered"
+  )
+  # The exact failure this guard exists for: re-registering a trusted
+  # unofficial backend under the same name must not silently make it official.
+  expect_false(resolve_backend("inspect")$official)
+})
+
+test_that("overwrite = TRUE replaces a backend deliberately", {
+  register_backend("demo-overwrite", function(...) NULL, official = FALSE)
+  on.exit(rm("demo-overwrite", envir = foceexecutorr:::.registry), add = TRUE)
+
+  register_backend("demo-overwrite", function(...) NULL, official = TRUE, overwrite = TRUE)
+
+  expect_true(resolve_backend("demo-overwrite")$official)
+})
+
 test_that("a backend cannot promote its own result to official", {
   # The property the whole registry exists for: `official` is read from the
   # registration, so a backend returning official = TRUE changes nothing.

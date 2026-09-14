@@ -19,13 +19,21 @@
 #'   parameter estimates, and nothing downstream can tell them apart unless the
 #'   backend says which it is. Anything unstated is unofficial.
 #' @param description One line, shown by [backends()].
+#' @param overwrite Must be `TRUE` to replace an already-registered `name`.
+#'   **Defaults to `FALSE` and errors on collision** -- silently replacing an
+#'   existing backend is exactly how a trusted `official = FALSE` registration
+#'   (the built-in `"inspect"` backend, for instance) would get quietly swapped
+#'   for one claiming `official = TRUE`, with every default `execute()` call
+#'   reporting official results afterwards. Replacing a backend on purpose is
+#'   legitimate; doing it by name collision is not, and this makes the two
+#'   distinguishable.
 #' @return Invisibly, the registered name.
 #' @examples
 #' register_backend("demo", function(descriptor, model, data_path, ...) list(ok = TRUE),
 #'                  official = FALSE, description = "example")
 #' "demo" %in% backends()$name
 #' @export
-register_backend <- function(name, run, official = FALSE, description = "") {
+register_backend <- function(name, run, official = FALSE, description = "", overwrite = FALSE) {
   if (!is.character(name) || length(name) != 1L || !nzchar(name)) {
     stop("`name` must be a non-empty string.", call. = FALSE)
   }
@@ -35,6 +43,13 @@ register_backend <- function(name, run, official = FALSE, description = "") {
   if (!is.logical(official) || length(official) != 1L || is.na(official)) {
     stop("`official` must be TRUE or FALSE -- an unstated provenance is exactly ",
          "what this flag exists to prevent.", call. = FALSE)
+  }
+  if (exists(name, envir = .registry, inherits = FALSE) && !isTRUE(overwrite)) {
+    existing <- get(name, envir = .registry, inherits = FALSE)
+    stop("a backend named '", name, "' is already registered (official = ",
+         existing$official, "). Pass `overwrite = TRUE` to replace it ",
+         "deliberately -- silently replacing a registered backend is exactly ",
+         "the failure this guard exists to prevent.", call. = FALSE)
   }
   assign(name, list(name = name, run = run, official = official,
                     description = description), envir = .registry)
