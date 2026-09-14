@@ -25,25 +25,61 @@
 #' d$run_id
 #' @export
 read_descriptor <- function(path) {
-  if (!is.character(path) || length(path) != 1L) {
+  if (!is.character(path) || length(path) != 1L || is.na(path)) {
     stop("`path` must be a single file path.", call. = FALSE)
   }
   if (!file.exists(path)) {
     stop("no descriptor at '", path, "'.", call. = FALSE)
   }
+  if (dir.exists(path)) {
+    stop("'", path, "' is a directory, not a descriptor file.", call. = FALSE)
+  }
+  if (file.info(path)$size == 0L) {
+    stop("'", path, "' is empty.", call. = FALSE)
+  }
   raw <- jsonlite::fromJSON(path, simplifyVector = FALSE)
   required <- c("schema_version", "run_id", "dataset_path", "structural_selection")
-  missing <- setdiff(required, names(raw))
+  # A key that is present but explicitly `null` is indistinguishable from an
+  # absent one here on purpose: both leave nothing downstream can use.
+  missing <- required[vapply(required, function(f) is.null(raw[[f]]), logical(1))]
   if (length(missing) > 0L) {
     stop("descriptor is missing required field(s): ", paste(missing, collapse = ", "),
          ". Is this a model.json?", call. = FALSE)
   }
-  if (!identical(raw$schema_version, SUPPORTED_SCHEMA_VERSION)) {
-    stop("descriptor is schema version ", raw$schema_version, "; this package supports ",
+  if (!is_supported_schema_version(raw$schema_version)) {
+    found <- describe_schema_version(raw$schema_version)
+    stop("descriptor is schema version ", found, "; this package supports ",
          SUPPORTED_SCHEMA_VERSION, ". Upgrade foceexecutorr rather than editing the descriptor -- ",
          "it is a signed record.", call. = FALSE)
   }
+  # Strip any field the descriptor itself happens to carry under this name
+  # first -- `c()` keeps the first match for a duplicated list name, so an
+  # untrusted `.source` in the JSON would otherwise shadow the real path.
+  raw[[".source"]] <- NULL
   structure(c(raw, list(.source = path)), class = "focex_descriptor")
+}
+
+# schema_version travels through JSON, where an integer, a double and a
+# numeric string are all the same "1" to anything that isn't R -- so the
+# check has to be on value, not representation, or a descriptor gets
+# rejected for a serialisation detail a signed pipeline never promised to
+# avoid.
+is_supported_schema_version <- function(version) {
+  if (is.null(version) || is.list(version) || length(version) != 1L) {
+    return(FALSE)
+  }
+  numeric_version <- suppressWarnings(as.numeric(version))
+  !is.na(numeric_version) && numeric_version == SUPPORTED_SCHEMA_VERSION
+}
+
+describe_schema_version <- function(version) {
+  if (is.null(version)) {
+    return("<missing>")
+  }
+  if (is.list(version) || length(version) != 1L) {
+    return(paste0("<", class(version)[1], ">"))
+  }
+  as.character(version)
 }
 
 #' The descriptor schema version this package executes
@@ -90,14 +126,43 @@ print.focex_descriptor <- function(x, ...) {
 #' @export
 chosen_model <- function(descriptor) {
   stopifnot(inherits(descriptor, "focex_descriptor"))
-  sel <- descriptor$structural_selection
-  submitted <- sel$submitted_models
-  ids <- vapply(submitted, function(m) m$model_id, character(1))
-  hit <- which(ids == sel$chosen_model_id)
-  if (length(hit) != 1L) {
-    stop("descriptor names chosen model '", sel$chosen_model_id,
+  # `[[` throughout, not `$`: partial name matching on a field like
+  # `chosen_model_id` would let a similarly-named field (e.g. a
+  # `chosen_model_id_prev` left by an older pipeline version) resolve
+  # silently instead of the one the descriptor actually names.
+  sel <- descriptor[["structural_selection"]]
+  submitted <- sel[["submitted_models"]]
+  if (!is.list(submitted) || length(submitted) == 0L) {
+    stop("descriptor's structural_selection has no submitted_models to choose from.",
+         call. = FALSE)
+  }
+  ids <- vapply(submitted, function(m) {
+    id <- m[["model_id"]]
+    if (is.null(id) || length(id) != 1L || !is.character(id)) {
+      stop("a submitted model is missing a valid `model_id`.", call. = FALSE)
+    }
+    id
+  }, character(1))
+
+  chosen_id <- sel[["chosen_model_id"]]
+  if (is.null(chosen_id)) {
+    stop("descriptor's structural_selection has no chosen_model_id.", call. = FALSE)
+  }
+  if (length(chosen_id) != 1L || !is.character(chosen_id)) {
+    stop("descriptor's chosen_model_id must be a single string, not a ",
+         class(chosen_id)[1], ".", call. = FALSE)
+  }
+
+  hit <- which(ids == chosen_id)
+  if (length(hit) == 0L) {
+    stop("descriptor names chosen model '", chosen_id,
          "' but the submitted tuple contains: ", paste(ids, collapse = ", "),
          call. = FALSE)
+  }
+  if (length(hit) > 1L) {
+    stop("descriptor names chosen model '", chosen_id,
+         "', which appears more than once in the submitted tuple: ",
+         paste(ids, collapse = ", "), call. = FALSE)
   }
   submitted[[hit]]
 }
