@@ -21,7 +21,7 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # setup-pandoc matters here specifically: the vignette is an .Rmd, and
       # `R CMD build` cannot render it without pandoc. The scaffold was checked
@@ -38,7 +38,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck, any::covr
+          extra-packages: any::rcmdcheck, any::covr, any::xml2
           needs: check, coverage
 
       - uses: r-lib/actions/check-r-package@v2
@@ -47,7 +47,22 @@ jobs:
 
       # Coverage is a riskmetric assessor in its own right (Decision 9), so it is
       # measured rather than assumed. Ubuntu only -- one report, not three.
-      - name: Test coverage
+      #
+      # Uploaded via the Codecov action rather than covr::codecov()'s own
+      # uploader: that call posted straight to Codecov's legacy endpoint and
+      # never inspected the response, so a rejected upload (missing token,
+      # rate limit, network error) still left this job green. The action's
+      # `fail_ci_if_error` closes that gap -- add a CODECOV_TOKEN repository
+      # secret for it to authenticate against Codecov.
+      - name: Generate coverage report
         if: matrix.config.os == 'ubuntu-latest'
-        run: covr::codecov(quiet = FALSE)
+        run: covr::to_cobertura(covr::package_coverage(), filename = "cobertura.xml")
         shell: Rscript {0}
+
+      - name: Upload coverage to Codecov
+        if: matrix.config.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
+        with:
+          files: cobertura.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
