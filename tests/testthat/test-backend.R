@@ -17,6 +17,14 @@ test_that("an unknown backend names the ones that exist", {
 })
 
 test_that("registering an existing name errors unless overwrite = TRUE", {
+  # Restore "inspect" regardless of outcome, the way the "liar" test below
+  # cleans up its own registration -- if this guard ever regresses, the
+  # overwrite below would otherwise persist into every later test in the
+  # suite (shared mutable `.registry`), turning one clear local failure into
+  # a wall of unrelated ones in test-execute.R.
+  original <- resolve_backend("inspect")
+  on.exit(assign("inspect", original, envir = foceexecutorr:::.registry), add = TRUE)
+
   expect_error(
     register_backend("inspect", function(...) NULL, official = TRUE),
     "already registered"
