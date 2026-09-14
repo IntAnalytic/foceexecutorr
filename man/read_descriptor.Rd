@@ -7,19 +7,19 @@
 read_descriptor(path)
 }
 \arguments{
-\item{path}{Path to a `model.json` file.}
+\item{path}{Path to a \code{model.json} file.}
 }
 \value{
-An object of class `focex_descriptor`: the parsed descriptor with its
-  source path attached.
+An object of class \code{focex_descriptor}: the parsed descriptor with its
+source path attached.
 }
 \description{
-Reads the `model.json` that the sentinel-poppk workflow writes to a run's
+Reads the \code{model.json} that the sentinel-poppk workflow writes to a run's
 workspace at report sign-off, and checks that it is one this package knows how
 to execute.
 }
 \details{
-The descriptor is deliberately the *only* input. It is self-contained by
+The descriptor is deliberately the \emph{only} input. It is self-contained by
 design: it carries the full model tuple as originally submitted, each paired
 with the fingerprint that identifies it, so an executor never needs to call
 back into the application that produced it.
@@ -36,5 +36,5 @@ d <- read_descriptor(path)
 d$run_id
 }
 \seealso{
-[chosen_model()] to resolve which model it selected, [execute()] to run it.
+\code{\link[=chosen_model]{chosen_model()}} to resolve which model it selected, \code{\link[=execute]{execute()}} to run it.
 }

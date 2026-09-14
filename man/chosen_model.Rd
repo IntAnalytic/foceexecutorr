@@ -7,7 +7,7 @@
 chosen_model(descriptor)
 }
 \arguments{
-\item{descriptor}{A `focex_descriptor` from [read_descriptor()].}
+\item{descriptor}{A \code{focex_descriptor} from \code{\link[=read_descriptor]{read_descriptor()}}.}
 }
 \value{
 A list describing the chosen model.

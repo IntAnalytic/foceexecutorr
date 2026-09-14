@@ -13,25 +13,25 @@ register_backend(
 )
 }
 \arguments{
-\item{name}{Short identifier, e.g. `"nonmem"`.}
+\item{name}{Short identifier, e.g. \code{"nonmem"}.}
 
-\item{run}{A function of `(descriptor, model, data_path, ...)` returning a list.
-It is called with the resolved descriptor and the model [chosen_model()]
+\item{run}{A function of \verb{(descriptor, model, data_path, ...)} returning a list.
+It is called with the resolved descriptor and the model \code{\link[=chosen_model]{chosen_model()}}
 picked, so a backend never re-implements descriptor parsing.}
 
-\item{official}{`TRUE` only if results from this backend may be treated as an
-official, reportable answer. **Defaults to `FALSE`, and that default is the
-point**: a preview engine and a qualified one both return plausible
+\item{official}{\code{TRUE} only if results from this backend may be treated as an
+official, reportable answer. \strong{Defaults to \code{FALSE}, and that default is the
+point}: a preview engine and a qualified one both return plausible
 parameter estimates, and nothing downstream can tell them apart unless the
 backend says which it is. Anything unstated is unofficial.}
 
-\item{description}{One line, shown by [backends()].}
+\item{description}{One line, shown by \code{\link[=backends]{backends()}}.}
 
-\item{overwrite}{Must be `TRUE` to replace an already-registered `name`.
-**Defaults to `FALSE` and errors on collision** -- silently replacing an
-existing backend is exactly how a trusted `official = FALSE` registration
-(the built-in `"inspect"` backend, for instance) would get quietly swapped
-for one claiming `official = TRUE`, with every default `execute()` call
+\item{overwrite}{Must be \code{TRUE} to replace an already-registered \code{name}.
+\strong{Defaults to \code{FALSE} and errors on collision} -- silently replacing an
+existing backend is exactly how a trusted \code{official = FALSE} registration
+(the built-in \code{"inspect"} backend, for instance) would get quietly swapped
+for one claiming \code{official = TRUE}, with every default \code{execute()} call
 reporting official results afterwards. Replacing a backend on purpose is
 legitimate; doing it by name collision is not, and this makes the two
 distinguishable.}

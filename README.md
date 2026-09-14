@@ -36,7 +36,7 @@ execute(d, backend = "inspect")
 #>   run:     demo-2cmt-wt-age-signed
 #>   model:   2cmt
 #>   backend: inspect
-#>   official: NO — not a reportable result
+#>   official: NO -- not a reportable result
 ```
 
 ## Registering a backend

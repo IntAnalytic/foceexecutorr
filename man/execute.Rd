@@ -7,20 +7,20 @@
 execute(descriptor, backend = "inspect", data_path = NULL, ...)
 }
 \arguments{
-\item{descriptor}{A `focex_descriptor`, or a path to a `model.json`.}
+\item{descriptor}{A \code{focex_descriptor}, or a path to a \code{model.json}.}
 
-\item{backend}{Name of a registered backend. Defaults to `"inspect"`, which
+\item{backend}{Name of a registered backend. Defaults to \code{"inspect"}, which
 runs nothing -- a default that cannot be mistaken for a result.}
 
 \item{data_path}{Optional path to the analysis-ready dataset. The descriptor
 names its dataset by catalogue id, not by path, so a caller running outside
 the originating system has to say where the data actually is.}
 
-\item{...}{Passed to the backend. May not include `descriptor`, `model`, or
-`data_path` -- those are always the ones execute() itself resolved.}
+\item{...}{Passed to the backend. May not include \code{descriptor}, \code{model}, or
+\code{data_path} -- those are always the ones execute() itself resolved.}
 }
 \value{
-An object of class `focex_result`.
+An object of class \code{focex_result}.
 }
 \description{
 The package's single entry point. Reads the descriptor if given a path, picks

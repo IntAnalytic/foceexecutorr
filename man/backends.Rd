@@ -7,7 +7,7 @@
 backends()
 }
 \value{
-A data frame with one row per backend: `name`, `official`, `description`.
+A data frame with one row per backend: \code{name}, \code{official}, \code{description}.
 }
 \description{
 List registered backends
