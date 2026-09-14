@@ -16,7 +16,8 @@
 #' @param data_path Optional path to the analysis-ready dataset. The descriptor
 #'   names its dataset by catalogue id, not by path, so a caller running outside
 #'   the originating system has to say where the data actually is.
-#' @param ... Passed to the backend.
+#' @param ... Passed to the backend. May not include `descriptor`, `model`, or
+#'   `data_path` -- those are always the ones execute() itself resolved.
 #' @return An object of class `focex_result`.
 #' @examples
 #' d <- system.file("extdata", "model.json", package = "foceexecutorr")
@@ -24,13 +25,20 @@
 #' res$official
 #' @export
 execute <- function(descriptor, backend = "inspect", data_path = NULL, ...) {
+  reserved <- intersect(names(list(...)), c("descriptor", "model", "data_path"))
+  if (length(reserved) > 0L) {
+    stop("execute()'s `...` may not include ", paste0("`", reserved, "`", collapse = ", "),
+         " -- these are supplied by execute() itself, and accepting them through `...` ",
+         "would let a caller substitute a different model or descriptor than the one ",
+         "the result reports.", call. = FALSE)
+  }
   if (is.character(descriptor)) {
     descriptor <- read_descriptor(descriptor)
   }
   stopifnot(inherits(descriptor, "focex_descriptor"))
   b <- resolve_backend(backend)
   model <- chosen_model(descriptor)
-  out <- b$run(descriptor, model, data_path, ...)
+  out <- b$run(descriptor = descriptor, model = model, data_path = data_path, ...)
   structure(
     list(
       run_id = descriptor$run_id,

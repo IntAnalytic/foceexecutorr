@@ -16,7 +16,8 @@ runs nothing -- a default that cannot be mistaken for a result.}
 names its dataset by catalogue id, not by path, so a caller running outside
 the originating system has to say where the data actually is.}
 
-\item{...}{Passed to the backend.}
+\item{...}{Passed to the backend. May not include `descriptor`, `model`, or
+`data_path` -- those are always the ones execute() itself resolved.}
 }
 \value{
 An object of class `focex_result`.
