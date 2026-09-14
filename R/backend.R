@@ -34,7 +34,7 @@
 #' "demo" %in% backends()$name
 #' @export
 register_backend <- function(name, run, official = FALSE, description = "", overwrite = FALSE) {
-  if (!is.character(name) || length(name) != 1L || !nzchar(name)) {
+  if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
     stop("`name` must be a non-empty string.", call. = FALSE)
   }
   if (!is.function(run)) {
@@ -43,6 +43,9 @@ register_backend <- function(name, run, official = FALSE, description = "", over
   if (!is.logical(official) || length(official) != 1L || is.na(official)) {
     stop("`official` must be TRUE or FALSE -- an unstated provenance is exactly ",
          "what this flag exists to prevent.", call. = FALSE)
+  }
+  if (!is.character(description) || length(description) != 1L || is.na(description)) {
+    stop("`description` must be a single string.", call. = FALSE)
   }
   if (exists(name, envir = .registry, inherits = FALSE) && !isTRUE(overwrite)) {
     existing <- get(name, envir = .registry, inherits = FALSE)
@@ -63,7 +66,7 @@ register_backend <- function(name, run, official = FALSE, description = "", over
 #' backends()
 #' @export
 backends <- function() {
-  names_ <- sort(ls(.registry))
+  names_ <- sort(ls(.registry, all.names = TRUE))
   if (length(names_) == 0L) {
     return(data.frame(name = character(), official = logical(),
                       description = character(), stringsAsFactors = FALSE))
@@ -85,9 +88,12 @@ backends <- function() {
 #' resolve_backend("inspect")$official
 #' @export
 resolve_backend <- function(name) {
+  if (!is.character(name) || length(name) != 1L || is.na(name)) {
+    stop("`name` must be a single non-NA string.", call. = FALSE)
+  }
   if (!exists(name, envir = .registry, inherits = FALSE)) {
     stop("no backend named '", name, "'. Registered: ",
-         paste(sort(ls(.registry)), collapse = ", "),
+         paste(sort(ls(.registry, all.names = TRUE)), collapse = ", "),
          ". Register one with register_backend().", call. = FALSE)
   }
   get(name, envir = .registry)
