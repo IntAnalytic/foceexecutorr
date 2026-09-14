@@ -22,6 +22,44 @@ test_that("the result carries the model the descriptor actually chose", {
 
   expect_equal(res$model_id, chosen_model(d)$model_id)
   expect_equal(res$result$would_run$compartments, chosen_model(d)$compartments)
+  # would_run$model_id is reported by the inspect backend itself, a separate
+  # code path from the outer $model_id execute() assigns directly -- this
+  # would still pass if the backend reported the wrong id there while the
+  # outer field stayed correct.
+  expect_equal(res$result$would_run$model_id, chosen_model(d)$model_id)
+})
+
+test_that("the result carries the descriptor's run_id, not a placeholder", {
+  d <- read_descriptor(fixture())
+
+  res <- execute(d)
+
+  expect_equal(res$run_id, d$run_id)
+  expect_true(nzchar(res$run_id))
+})
+
+test_that("the result names the backend that actually ran, not a fixed label", {
+  register_backend("label-probe", function(...) list(ok = TRUE),
+                    official = FALSE, description = "checks the recorded backend name")
+  on.exit(rm("label-probe", envir = foceexecutorr:::.registry), add = TRUE)
+
+  res <- execute(fixture(), backend = "label-probe")
+
+  expect_equal(res$backend, "label-probe")
+})
+
+test_that("execute() reports official = TRUE for a backend registered as official", {
+  # The mirror image of the "liar" test in test-backend.R, which shows a
+  # backend cannot promote itself to official. This shows the flag actually
+  # comes through when the registration itself says TRUE -- execute() must
+  # read b$official, not always report FALSE.
+  register_backend("official-probe", function(...) list(ok = TRUE),
+                    official = TRUE, description = "a genuinely official backend")
+  on.exit(rm("official-probe", envir = foceexecutorr:::.registry), add = TRUE)
+
+  res <- execute(fixture(), backend = "official-probe")
+
+  expect_true(res$official)
 })
 
 test_that("the data path a caller supplies reaches the backend", {
@@ -64,4 +102,16 @@ test_that("the backend receives the model and descriptor by name, not position",
 
   expect_equal(res$result$model_id_seen, chosen_model(d)$model_id)
   expect_equal(res$result$descriptor_run_id_seen, d$run_id)
+})
+
+test_that("print.focex_result reflects the actual official flag both ways", {
+  unofficial <- execute(fixture())
+  expect_output(print(unofficial), "official: NO -- not a reportable result", fixed = TRUE)
+
+  register_backend("print-probe", function(...) list(ok = TRUE),
+                    official = TRUE, description = "for the print test")
+  on.exit(rm("print-probe", envir = foceexecutorr:::.registry), add = TRUE)
+  official <- execute(fixture(), backend = "print-probe")
+
+  expect_output(print(official), "official: yes", fixed = TRUE)
 })
