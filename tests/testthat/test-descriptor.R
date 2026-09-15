@@ -285,3 +285,21 @@ test_that("an integer beyond exact double precision is preserved, not rounded", 
 
   expect_equal(chosen_model(d)$seed, "9007199254740993")
 })
+
+test_that("an integer beyond the 64-bit signed range still rounds silently", {
+  # bigint_as_char = TRUE only extends exactness to the signed 64-bit range
+  # (up to 9223372036854775807); jsonlite itself falls back to a rounded
+  # double beyond that. Documented as a known, accepted gap -- a seed in
+  # the quintillions is not a realistic concern here -- rather than left
+  # as an implicit claim the fix doesn't actually make.
+  tmp <- tempfile(fileext = ".json")
+  writeLines(sub('"seed": 7,', '"seed": 9223372036854775809,',
+                 readLines(fixture(), warn = FALSE), fixed = TRUE),
+             tmp)
+
+  d <- read_descriptor(tmp)
+  seed <- chosen_model(d)$seed
+
+  expect_type(seed, "double")
+  expect_equal(seed, 9223372036854775808)  # rounded, not the 809 in the file
+})

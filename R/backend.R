@@ -16,9 +16,14 @@
 # `nzchar(trimws(name))` alone treated as non-empty. The length cap keeps a
 # too-long name from ever reaching exists(), which errors with R's own
 # "variable names are limited to 10000 bytes" instead of a package message.
+#
+# validUTF8() runs first: perl = TRUE regex on invalid UTF-8 bytes warns
+# ("input string 1 is invalid UTF-8") and its match result can't be trusted,
+# which would otherwise let a mojibake name slip past the whitespace check
+# entirely and register under whatever garbled bytes it decodes to.
 is_nonempty_name <- function(name) {
   is.character(name) && length(name) == 1L && !is.na(name) &&
-    nzchar(name) &&
+    nzchar(name) && validUTF8(name) &&
     !grepl("[\\p{Z}\\s]", name, perl = TRUE) &&
     nchar(name, type = "bytes") <= 200L
 }
@@ -28,7 +33,13 @@ is_nonempty_name <- function(name) {
 #' @param name Short identifier, e.g. `"nonmem"`.
 #' @param run A function of `(descriptor, model, data_path, ...)` returning a list.
 #'   It is called with the resolved descriptor and the model [chosen_model()]
-#'   picked, so a backend never re-implements descriptor parsing.
+#'   picked, so a backend never re-implements descriptor parsing. Integer
+#'   fields on `model` (e.g. `seed`) are ordinarily numeric, but arrive as a
+#'   character string instead if the descriptor's value exceeds 2^53 -- an R
+#'   double can't represent an integer beyond that exactly, so
+#'   [read_descriptor()] preserves the digits as a string rather than
+#'   silently rounding it. Check `is.character()` before doing arithmetic on
+#'   such a field if that's a realistic possibility for your backend.
 #' @param official `TRUE` only if results from this backend may be treated as an
 #'   official, reportable answer. **Defaults to `FALSE`, and that default is the
 #'   point**: a preview engine and a qualified one both return plausible
@@ -54,7 +65,7 @@ is_nonempty_name <- function(name) {
 #' @export
 register_backend <- function(name, run, official = FALSE, description = "", overwrite = FALSE) {
   if (!is_nonempty_name(name)) {
-    stop("`name` must be a non-empty string.", call. = FALSE)
+    stop("`name` must be a short identifier: 1-200 bytes, no whitespace.", call. = FALSE)
   }
   if (!is.function(run)) {
     stop("`run` must be a function.", call. = FALSE)
@@ -108,7 +119,7 @@ backends <- function() {
 #' @export
 resolve_backend <- function(name) {
   if (!is_nonempty_name(name)) {
-    stop("`name` must be a non-empty string.", call. = FALSE)
+    stop("`name` must be a short identifier: 1-200 bytes, no whitespace.", call. = FALSE)
   }
   if (!exists(name, envir = .registry, inherits = FALSE)) {
     stop("no backend named '", name, "'. Registered: ",

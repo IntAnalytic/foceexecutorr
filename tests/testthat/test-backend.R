@@ -8,33 +8,42 @@ test_that("the built-in inspect backend is registered and is not official", {
 test_that("registering requires an explicit official flag of the right shape", {
   expect_error(register_backend("bad", function(...) NULL, official = NA), "official")
   expect_error(register_backend("bad", "not a function"), "function")
-  expect_error(register_backend("", function(...) NULL), "non-empty")
-  expect_error(register_backend(NA_character_, function(...) NULL), "non-empty")
-  expect_error(register_backend("   ", function(...) NULL), "non-empty")
+  expect_error(register_backend("", function(...) NULL), "short identifier")
+  expect_error(register_backend(NA_character_, function(...) NULL), "short identifier")
+  expect_error(register_backend("   ", function(...) NULL), "short identifier")
 })
 
 test_that("a name with leading, trailing, or internal whitespace is rejected", {
   # Rejecting outright, rather than trimming and registering under the
   # trimmed name, avoids " inspect" and "inspect" coexisting as visually
   # near-identical but distinct registry entries.
-  expect_error(register_backend(" inspect", function(...) NULL), "non-empty")
-  expect_error(register_backend("inspect ", function(...) NULL), "non-empty")
-  expect_error(register_backend("in spect", function(...) NULL), "non-empty")
+  expect_error(register_backend(" inspect", function(...) NULL), "short identifier")
+  expect_error(register_backend("inspect ", function(...) NULL), "short identifier")
+  expect_error(register_backend("in spect", function(...) NULL), "short identifier")
 })
 
 test_that("a name that is only a non-breaking space is rejected", {
   # nzchar(trimws(x)) alone treated this as non-empty: base trimws() strips
   # ASCII whitespace only, not exotic Unicode whitespace like U+00A0.
-  expect_error(register_backend(" ", function(...) NULL), "non-empty")
-  expect_error(resolve_backend(" "), "non-empty")
+  expect_error(register_backend(" ", function(...) NULL), "short identifier")
+  expect_error(resolve_backend(" "), "short identifier")
 })
 
 test_that("an oversized name is rejected with a clear message, not exists()'s own error", {
   # Previously reached exists() uncaught, which errors with R's own
   # "variable names are limited to 10000 bytes" instead of a package message.
   huge <- strrep("a", 10001L)
-  expect_error(register_backend(huge, function(...) NULL), "non-empty")
-  expect_error(resolve_backend(huge), "non-empty")
+  expect_error(register_backend(huge, function(...) NULL), "short identifier")
+  expect_error(resolve_backend(huge), "short identifier")
+})
+
+test_that("a name with invalid UTF-8 bytes is rejected, not registered as mojibake", {
+  # perl = TRUE regex on invalid UTF-8 warns ("input string 1 is invalid
+  # UTF-8") and its match result can't be trusted -- without a validUTF8()
+  # check first, this slipped past the whitespace check and registered.
+  bad <- rawToChar(as.raw(c(0x66, 0x6f, 0x6f, 0xff, 0xfe)))
+  expect_error(register_backend(bad, function(...) NULL), "short identifier")
+  expect_error(resolve_backend(bad), "short identifier")
 })
 
 test_that("registering requires a description that is a single string", {
@@ -61,13 +70,13 @@ test_that("a dot-prefixed backend name is still listed and resolvable", {
 })
 
 test_that("resolve_backend() rejects a non-string or empty name with a clear error", {
-  expect_error(resolve_backend(1), "non-empty string")
-  expect_error(resolve_backend(NA_character_), "non-empty string")
-  expect_error(resolve_backend(c("inspect", "nonmem")), "non-empty string")
+  expect_error(resolve_backend(1), "short identifier")
+  expect_error(resolve_backend(NA_character_), "short identifier")
+  expect_error(resolve_backend(c("inspect", "nonmem")), "short identifier")
   # Previously leaked R's bare "invalid first argument" from exists(), since
   # the guard checked type and NA but not nzchar().
-  expect_error(resolve_backend(""), "non-empty string")
-  expect_error(resolve_backend("   "), "non-empty string")
+  expect_error(resolve_backend(""), "short identifier")
+  expect_error(resolve_backend("   "), "short identifier")
 })
 
 test_that("an unknown backend names the ones that exist", {

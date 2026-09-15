@@ -47,6 +47,11 @@ read_descriptor <- function(path) {
   # in what is meant to be a signed, exact record without any indication.
   # Returning the digits as a string instead is honest about what was
   # actually in the file, even though it changes that field's R type.
+  # This only extends exactness to the signed 64-bit range (up to
+  # 9223372036854775807): jsonlite itself falls back to a rounded double
+  # beyond that, silently again. Seed values in the quintillions are not a
+  # realistic concern for this package, so that residual gap is accepted
+  # rather than guarded against.
   raw <- jsonlite::read_json(path, simplifyVector = FALSE, bigint_as_char = TRUE)
   required <- c("schema_version", "run_id", "dataset_path", "structural_selection")
   # A top-level JSON scalar ("hello", 5, true) parses to an atomic vector,

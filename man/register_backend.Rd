@@ -17,7 +17,13 @@ register_backend(
 
 \item{run}{A function of \verb{(descriptor, model, data_path, ...)} returning a list.
 It is called with the resolved descriptor and the model \code{\link[=chosen_model]{chosen_model()}}
-picked, so a backend never re-implements descriptor parsing.}
+picked, so a backend never re-implements descriptor parsing. Integer
+fields on \code{model} (e.g. \code{seed}) are ordinarily numeric, but arrive as a
+character string instead if the descriptor's value exceeds 2^53 -- an R
+double can't represent an integer beyond that exactly, so
+\code{\link[=read_descriptor]{read_descriptor()}} preserves the digits as a string rather than
+silently rounding it. Check \code{is.character()} before doing arithmetic on
+such a field if that's a realistic possibility for your backend.}
 
 \item{official}{\code{TRUE} only if results from this backend may be treated as an
 official, reportable answer. \strong{Defaults to \code{FALSE}, and that default is the

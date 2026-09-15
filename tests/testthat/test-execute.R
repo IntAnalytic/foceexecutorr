@@ -14,7 +14,7 @@ test_that("execute()'s own argument errors name execute()'s own parameters", {
   # Previously delegated straight to resolve_backend()/read_descriptor(),
   # surfacing THEIR parameter names ("name", "path") instead of the ones
   # this call actually used ("backend", "descriptor").
-  expect_error(execute(d, backend = 1), "`backend` must be a non-empty string",
+  expect_error(execute(d, backend = 1), "`backend` must be a short identifier",
                fixed = TRUE)
   expect_error(execute(c("a", "b")), "`descriptor` must be a single file path",
                fixed = TRUE)
@@ -56,6 +56,19 @@ test_that("would_run$covariates falls back to character() when there are none", 
   res <- execute(d)
 
   expect_equal(res$result$would_run$covariates, character())
+})
+
+test_that("would_run$seed does not partial-match a similarly named field", {
+  # The inspect backend reads model fields with `$`, which partial-matches:
+  # a model missing `seed` but carrying `seed_source` would otherwise have
+  # that field's value reported as the seed here.
+  d <- read_descriptor(fixture())
+  d$structural_selection$submitted_models[[2]]$seed <- NULL
+  d$structural_selection$submitted_models[[2]]$seed_source <- "operator"
+
+  res <- execute(d)
+
+  expect_null(res$result$would_run$seed)
 })
 
 test_that("the result carries the descriptor's run_id, not a placeholder", {

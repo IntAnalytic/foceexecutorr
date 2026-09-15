@@ -39,8 +39,8 @@ execute <- function(descriptor, backend = "inspect", data_path = NULL, ...) {
   # Validated here, using execute()'s own parameter names, rather than left
   # to read_descriptor()/resolve_backend(): those report failures about
   # `path`/`name`, arguments this function's caller never actually passed,
-  # e.g. execute(backend = 1) would otherwise surface "`name` must be a
-  # non-empty string" instead of naming `backend`.
+  # e.g. execute(backend = 1) would otherwise surface a message about `name`
+  # instead of naming `backend`.
   if (is.character(descriptor)) {
     if (length(descriptor) != 1L || is.na(descriptor)) {
       stop("`descriptor` must be a single file path when given as a string.", call. = FALSE)
@@ -53,7 +53,8 @@ execute <- function(descriptor, backend = "inspect", data_path = NULL, ...) {
          ".", call. = FALSE)
   }
   if (!is_nonempty_name(backend)) {
-    stop("`backend` must be a non-empty string naming a registered backend.", call. = FALSE)
+    stop("`backend` must be a short identifier naming a registered backend: ",
+         "1-200 bytes, no whitespace.", call. = FALSE)
   }
   b <- resolve_backend(backend)
   model <- chosen_model(descriptor)
