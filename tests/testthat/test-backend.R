@@ -10,6 +10,7 @@ test_that("registering requires an explicit official flag of the right shape", {
   expect_error(register_backend("bad", "not a function"), "function")
   expect_error(register_backend("", function(...) NULL), "non-empty")
   expect_error(register_backend(NA_character_, function(...) NULL), "non-empty")
+  expect_error(register_backend("   ", function(...) NULL), "non-empty")
 })
 
 test_that("registering requires a description that is a single string", {
@@ -35,10 +36,14 @@ test_that("a dot-prefixed backend name is still listed and resolvable", {
   expect_error(resolve_backend("nonmem"), ".hidden-probe", fixed = TRUE)
 })
 
-test_that("resolve_backend() rejects a non-string name with a clear error", {
-  expect_error(resolve_backend(1), "single non-NA string")
-  expect_error(resolve_backend(NA_character_), "single non-NA string")
-  expect_error(resolve_backend(c("inspect", "nonmem")), "single non-NA string")
+test_that("resolve_backend() rejects a non-string or empty name with a clear error", {
+  expect_error(resolve_backend(1), "non-empty string")
+  expect_error(resolve_backend(NA_character_), "non-empty string")
+  expect_error(resolve_backend(c("inspect", "nonmem")), "non-empty string")
+  # Previously leaked R's bare "invalid first argument" from exists(), since
+  # the guard checked type and NA but not nzchar().
+  expect_error(resolve_backend(""), "non-empty string")
+  expect_error(resolve_backend("   "), "non-empty string")
 })
 
 test_that("an unknown backend names the ones that exist", {

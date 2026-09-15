@@ -7,6 +7,14 @@
 
 .registry <- new.env(parent = emptyenv())
 
+# Shared by register_backend() and resolve_backend(): nzchar() alone treats
+# a whitespace-only string as non-empty, which would let "" slip through
+# resolve_backend() to bare "invalid first argument" from exists(), or let
+# " " register as a real backend name.
+is_nonempty_name <- function(name) {
+  is.character(name) && length(name) == 1L && !is.na(name) && nzchar(trimws(name))
+}
+
 #' Register an estimation backend
 #'
 #' @param name Short identifier, e.g. `"nonmem"`.
@@ -34,7 +42,7 @@
 #' "demo" %in% backends()$name
 #' @export
 register_backend <- function(name, run, official = FALSE, description = "", overwrite = FALSE) {
-  if (!is.character(name) || length(name) != 1L || is.na(name) || !nzchar(name)) {
+  if (!is_nonempty_name(name)) {
     stop("`name` must be a non-empty string.", call. = FALSE)
   }
   if (!is.function(run)) {
@@ -88,8 +96,8 @@ backends <- function() {
 #' resolve_backend("inspect")$official
 #' @export
 resolve_backend <- function(name) {
-  if (!is.character(name) || length(name) != 1L || is.na(name)) {
-    stop("`name` must be a single non-NA string.", call. = FALSE)
+  if (!is_nonempty_name(name)) {
+    stop("`name` must be a non-empty string.", call. = FALSE)
   }
   if (!exists(name, envir = .registry, inherits = FALSE)) {
     stop("no backend named '", name, "'. Registered: ",
