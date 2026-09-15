@@ -76,9 +76,9 @@ is_supported_schema_version <- function(version) {
   if (is.null(version) || is.list(version) || length(version) != 1L) {
     return(FALSE)
   }
-  if (is.logical(version)) {
-    return(FALSE)
-  }
+  # No separate is.logical() rejection needed: is.numeric(TRUE) and
+  # is.character(TRUE) are both FALSE, so a logical already falls through
+  # to the final FALSE below on its own.
   if (is.numeric(version)) {
     return(!is.na(version) && version == SUPPORTED_SCHEMA_VERSION)
   }
@@ -86,6 +86,12 @@ is_supported_schema_version <- function(version) {
     return(as.numeric(version) == SUPPORTED_SCHEMA_VERSION)
   }
   FALSE
+}
+
+# "not a integer" reads wrong; "not an integer" doesn't -- the only common
+# class() result here where it matters, but cheap to get right in general.
+article_for <- function(word) {
+  if (grepl("^[aeiouAEIOU]", word)) "an" else "a"
 }
 
 describe_schema_version <- function(version) {
@@ -146,8 +152,8 @@ print.focex_descriptor <- function(x, ...) {
 #' @export
 chosen_model <- function(descriptor) {
   if (!inherits(descriptor, "focex_descriptor")) {
-    stop("`descriptor` must be a `focex_descriptor` from read_descriptor(), not a ",
-         class(descriptor)[1], ".", call. = FALSE)
+    stop("`descriptor` must be a `focex_descriptor` from read_descriptor(), not ",
+         article_for(class(descriptor)[1]), " ", class(descriptor)[1], ".", call. = FALSE)
   }
   # `[[` throughout, not `$`: partial name matching on a field like
   # `chosen_model_id` would let a similarly-named field (e.g. a
@@ -155,8 +161,8 @@ chosen_model <- function(descriptor) {
   # silently instead of the one the descriptor actually names.
   sel <- descriptor[["structural_selection"]]
   if (!is.list(sel)) {
-    stop("descriptor's structural_selection must be an object, not a ",
-         class(sel)[1], ".", call. = FALSE)
+    stop("descriptor's structural_selection must be an object, not ",
+         article_for(class(sel)[1]), " ", class(sel)[1], ".", call. = FALSE)
   }
   submitted <- sel[["submitted_models"]]
   if (!is.list(submitted) || length(submitted) == 0L) {
@@ -165,7 +171,8 @@ chosen_model <- function(descriptor) {
   }
   ids <- vapply(submitted, function(m) {
     if (!is.list(m)) {
-      stop("a submitted model must be an object, not a ", class(m)[1], ".", call. = FALSE)
+      stop("a submitted model must be an object, not ",
+           article_for(class(m)[1]), " ", class(m)[1], ".", call. = FALSE)
     }
     id <- m[["model_id"]]
     if (is.null(id) || length(id) != 1L || !is.character(id)) {
@@ -179,8 +186,8 @@ chosen_model <- function(descriptor) {
     stop("descriptor's structural_selection has no chosen_model_id.", call. = FALSE)
   }
   if (length(chosen_id) != 1L || !is.character(chosen_id)) {
-    stop("descriptor's chosen_model_id must be a single string, not a ",
-         class(chosen_id)[1], ".", call. = FALSE)
+    stop("descriptor's chosen_model_id must be a single string, not ",
+         article_for(class(chosen_id)[1]), " ", class(chosen_id)[1], ".", call. = FALSE)
   }
 
   hit <- which(ids == chosen_id)

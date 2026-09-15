@@ -1,8 +1,12 @@
 fixture <- function() system.file("extdata", "model.json", package = "foceexecutorr")
 
 test_that("execute() rejects a non-descriptor, non-path input with a clear message", {
-  expect_error(execute(5), "focex_descriptor")
-  expect_error(execute(list()), "focex_descriptor")
+  # "focex_descriptor" alone doesn't pin this: stopifnot(inherits(...))'s own
+  # default message ("inherits(descriptor, \"focex_descriptor\") is not TRUE")
+  # contains that substring too, so it would pass just the same if this ever
+  # regressed back to stopifnot(). "must be a" is unique to the replacement.
+  expect_error(execute(5), "must be a", fixed = TRUE)
+  expect_error(execute(list()), "must be a", fixed = TRUE)
 })
 
 test_that("execute accepts a path or a descriptor and reports both ways the same", {

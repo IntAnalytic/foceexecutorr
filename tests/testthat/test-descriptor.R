@@ -82,8 +82,12 @@ test_that("a submitted model missing model_id fails with a descriptor-level mess
 })
 
 test_that("chosen_model() rejects a non-descriptor with a clear message", {
-  expect_error(chosen_model(5), "focex_descriptor")
-  expect_error(chosen_model(list()), "focex_descriptor")
+  # "focex_descriptor" alone doesn't pin this: stopifnot(inherits(...))'s own
+  # default message ("inherits(descriptor, \"focex_descriptor\") is not TRUE")
+  # contains that substring too, so it would pass just the same if this ever
+  # regressed back to stopifnot(). "must be a" is unique to the replacement.
+  expect_error(chosen_model(5), "must be a", fixed = TRUE)
+  expect_error(chosen_model(list()), "must be a", fixed = TRUE)
 })
 
 test_that("empty structural_selection fails clearly instead of inside vapply", {
@@ -198,6 +202,12 @@ test_that("a non-object structural_selection fails clearly instead of crashing",
   d2 <- read_descriptor(fixture())
   d2$structural_selection <- 5
   expect_error(chosen_model(d2), "structural_selection must be an object")
+})
+
+test_that("the type-mismatch message picks 'a' or 'an' correctly", {
+  d <- read_descriptor(fixture())
+  d$structural_selection <- 5L
+  expect_error(chosen_model(d), "not an integer", fixed = TRUE)
 })
 
 test_that("submitted_models entries that are not objects fail clearly instead of crashing", {
