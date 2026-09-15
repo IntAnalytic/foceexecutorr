@@ -1,5 +1,10 @@
 fixture <- function() system.file("extdata", "model.json", package = "foceexecutorr")
 
+test_that("execute() rejects a non-descriptor, non-path input with a clear message", {
+  expect_error(execute(5), "focex_descriptor")
+  expect_error(execute(list()), "focex_descriptor")
+})
+
 test_that("execute accepts a path or a descriptor and reports both ways the same", {
   from_path <- execute(fixture())
   from_obj <- execute(read_descriptor(fixture()))

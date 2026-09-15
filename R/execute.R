@@ -35,7 +35,10 @@ execute <- function(descriptor, backend = "inspect", data_path = NULL, ...) {
   if (is.character(descriptor)) {
     descriptor <- read_descriptor(descriptor)
   }
-  stopifnot(inherits(descriptor, "focex_descriptor"))
+  if (!inherits(descriptor, "focex_descriptor")) {
+    stop("`descriptor` must be a `focex_descriptor` (from read_descriptor()) or a path ",
+         "to a model.json, not a ", class(descriptor)[1], ".", call. = FALSE)
+  }
   b <- resolve_backend(backend)
   model <- chosen_model(descriptor)
   out <- b$run(descriptor = descriptor, model = model, data_path = data_path, ...)
