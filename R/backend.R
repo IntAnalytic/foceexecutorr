@@ -7,12 +7,20 @@
 
 .registry <- new.env(parent = emptyenv())
 
-# Shared by register_backend() and resolve_backend(): nzchar() alone treats
-# a whitespace-only string as non-empty, which would let "" slip through
-# resolve_backend() to bare "invalid first argument" from exists(), or let
-# " " register as a real backend name.
+# Shared by register_backend() and resolve_backend(). A backend name is a
+# short identifier, not free text, so no character in it should ever be
+# whitespace -- rejecting outright rather than trimming avoids two look-alike
+# entries (" inspect" vs "inspect") coexisting as distinct registry keys, and
+# `\p{Z}` (Unicode "separator, space") catches exotic whitespace ASCII
+# trimws() doesn't, such as a name that is only a non-breaking space, which
+# `nzchar(trimws(name))` alone treated as non-empty. The length cap keeps a
+# too-long name from ever reaching exists(), which errors with R's own
+# "variable names are limited to 10000 bytes" instead of a package message.
 is_nonempty_name <- function(name) {
-  is.character(name) && length(name) == 1L && !is.na(name) && nzchar(trimws(name))
+  is.character(name) && length(name) == 1L && !is.na(name) &&
+    nzchar(name) &&
+    !grepl("[\\p{Z}\\s]", name, perl = TRUE) &&
+    nchar(name, type = "bytes") <= 200L
 }
 
 #' Register an estimation backend
@@ -37,8 +45,11 @@ is_nonempty_name <- function(name) {
 #'   distinguishable.
 #' @return Invisibly, the registered name.
 #' @examples
+#' # overwrite = TRUE makes this example safe to run more than once in the
+#' # same session -- without it, registering "demo" a second time would hit
+#' # the overwrite guard documented above.
 #' register_backend("demo", function(descriptor, model, data_path, ...) list(ok = TRUE),
-#'                  official = FALSE, description = "example")
+#'                  official = FALSE, description = "example", overwrite = TRUE)
 #' "demo" %in% backends()$name
 #' @export
 register_backend <- function(name, run, official = FALSE, description = "", overwrite = FALSE) {
@@ -116,17 +127,20 @@ resolve_backend <- function(name) {
   register_backend(
     "inspect",
     run = function(descriptor, model, data_path, ...) {
+      # `[[`, not `$`: a submitted model missing e.g. `seed` but carrying a
+      # similarly-named field (`seed_source`) would otherwise have that
+      # field's value silently reported as the seed in this summary.
       list(
         executed = FALSE,
         reason = "the 'inspect' backend runs no estimation",
         would_run = list(
-          model_id = model$model_id,
-          compartments = model$compartments,
-          error_model = model$error_model,
-          covariates = unlist(model$covariates) %||% character(),
-          estimation_method = model$estimation_method,
-          seed = model$seed,
-          dataset = descriptor$dataset_path,
+          model_id = model[["model_id"]],
+          compartments = model[["compartments"]],
+          error_model = model[["error_model"]],
+          covariates = unlist(model[["covariates"]]) %||% character(),
+          estimation_method = model[["estimation_method"]],
+          seed = model[["seed"]],
+          dataset = descriptor[["dataset_path"]],
           data_path = data_path
         )
       )

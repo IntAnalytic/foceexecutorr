@@ -13,6 +13,30 @@ test_that("registering requires an explicit official flag of the right shape", {
   expect_error(register_backend("   ", function(...) NULL), "non-empty")
 })
 
+test_that("a name with leading, trailing, or internal whitespace is rejected", {
+  # Rejecting outright, rather than trimming and registering under the
+  # trimmed name, avoids " inspect" and "inspect" coexisting as visually
+  # near-identical but distinct registry entries.
+  expect_error(register_backend(" inspect", function(...) NULL), "non-empty")
+  expect_error(register_backend("inspect ", function(...) NULL), "non-empty")
+  expect_error(register_backend("in spect", function(...) NULL), "non-empty")
+})
+
+test_that("a name that is only a non-breaking space is rejected", {
+  # nzchar(trimws(x)) alone treated this as non-empty: base trimws() strips
+  # ASCII whitespace only, not exotic Unicode whitespace like U+00A0.
+  expect_error(register_backend(" ", function(...) NULL), "non-empty")
+  expect_error(resolve_backend(" "), "non-empty")
+})
+
+test_that("an oversized name is rejected with a clear message, not exists()'s own error", {
+  # Previously reached exists() uncaught, which errors with R's own
+  # "variable names are limited to 10000 bytes" instead of a package message.
+  huge <- strrep("a", 10001L)
+  expect_error(register_backend(huge, function(...) NULL), "non-empty")
+  expect_error(resolve_backend(huge), "non-empty")
+})
+
 test_that("registering requires a description that is a single string", {
   expect_error(register_backend("bad", function(...) NULL, description = NULL), "description")
   expect_error(register_backend("bad", function(...) NULL, description = c("a", "b")),
