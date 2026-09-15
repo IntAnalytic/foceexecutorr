@@ -146,7 +146,12 @@ test_that("a schema_version serialised as a double or a string is still accepted
   writeLines(sub('"schema_version": 1,', '"schema_version": 1.0,',
                  readLines(fixture(), warn = FALSE), fixed = TRUE),
              as_double)
-  expect_equal(read_descriptor(as_double)$schema_version, 1)
+  # expect_equal(x, 1) alone would also pass if this were parsed as the
+  # integer 1L -- all.equal() doesn't distinguish -- so it wouldn't actually
+  # pin the double-literal parsing path this test exists to cover.
+  double_version <- read_descriptor(as_double)$schema_version
+  expect_type(double_version, "double")
+  expect_equal(double_version, 1)
 
   as_string <- tempfile(fileext = ".json")
   raw <- jsonlite::fromJSON(fixture(), simplifyVector = FALSE)
@@ -245,4 +250,38 @@ test_that("print() does not partial-match sign_off onto a similarly named field"
 
   out <- capture.output(print(d))
   expect_false(any(grepl("signed by", out, fixed = TRUE)))
+})
+
+test_that("a bare filename that is itself valid JSON is read as a file, not parsed as text", {
+  # jsonlite::fromJSON() checks whether its string argument validates as
+  # JSON *before* treating it as a path. A path with a directory component
+  # ("/tmp/xyz/2026") never parses as JSON on its own, so it always falls
+  # through to being read as a file regardless -- the ambiguity only bites
+  # for a bare relative filename, which is exactly what "2026" itself is
+  # valid JSON as (the literal number 2026).
+  dir <- tempfile()
+  dir.create(dir)
+  file.copy(fixture(), file.path(dir, "2026"))
+  old_wd <- setwd(dir)
+  on.exit(setwd(old_wd), add = TRUE)
+
+  d <- read_descriptor("2026")
+
+  expect_s3_class(d, "focex_descriptor")
+  expect_equal(d$run_id, "demo-2cmt-wt-age-signed")
+})
+
+test_that("an integer beyond exact double precision is preserved, not rounded", {
+  # An R double only represents integers exactly up to 2^53; past that the
+  # default JSON parse silently rounds -- corrupting a value in what is
+  # meant to be a signed, exact record. 9007199254740993 (2^53 + 1) would
+  # come back as 9007199254740992 without bigint_as_char = TRUE.
+  tmp <- tempfile(fileext = ".json")
+  writeLines(sub('"seed": 7,', '"seed": 9007199254740993,',
+                 readLines(fixture(), warn = FALSE), fixed = TRUE),
+             tmp)
+
+  d <- read_descriptor(tmp)
+
+  expect_equal(chosen_model(d)$seed, "9007199254740993")
 })

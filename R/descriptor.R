@@ -37,7 +37,17 @@ read_descriptor <- function(path) {
   if (file.info(path)$size == 0L) {
     stop("'", path, "' is empty.", call. = FALSE)
   }
-  raw <- jsonlite::fromJSON(path, simplifyVector = FALSE)
+  # read_json(), not fromJSON(): fromJSON() checks whether its string
+  # argument itself validates as JSON before treating it as a path, so a
+  # file whose name happens to be valid JSON on its own (e.g. "2026") would
+  # be parsed as that literal value instead of ever being opened.
+  #
+  # bigint_as_char = TRUE: an R double only represents integers exactly up
+  # to 2^53. Past that, the default silently rounds -- corrupting a value
+  # in what is meant to be a signed, exact record without any indication.
+  # Returning the digits as a string instead is honest about what was
+  # actually in the file, even though it changes that field's R type.
+  raw <- jsonlite::read_json(path, simplifyVector = FALSE, bigint_as_char = TRUE)
   required <- c("schema_version", "run_id", "dataset_path", "structural_selection")
   # A top-level JSON scalar ("hello", 5, true) parses to an atomic vector,
   # not a list; `[[` on it errors ("subscript out of bounds") instead of
