@@ -17,6 +17,11 @@ jobs:
           - {os: ubuntu-latest,  r: 'release'}
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
+          # R-devel, because that's what CRAN's own incoming checks run
+          # against; 4.1, because that's the floor Depends: R (>= 4.1)
+          # actually declares -- neither was previously exercised at all.
+          - {os: ubuntu-latest,  r: 'devel'}
+          - {os: ubuntu-latest,  r: '4.1'}
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
@@ -46,7 +51,7 @@ jobs:
           upload-snapshots: true
 
       # Coverage is a riskmetric assessor in its own right (Decision 9), so it is
-      # measured rather than assumed. Ubuntu only -- one report, not three.
+      # measured rather than assumed. Ubuntu release only -- one report, not five.
       #
       # Uploaded via the Codecov action rather than covr::codecov()'s own
       # uploader: that call posted straight to Codecov's legacy endpoint and
@@ -57,13 +62,13 @@ jobs:
       # otherwise fail this job at the upload step. Add the secret, and this
       # starts enforcing on its own.
       - name: Generate coverage report
-        if: matrix.config.os == 'ubuntu-latest'
+        if: matrix.config.os == 'ubuntu-latest' && matrix.config.r == 'release'
         run: covr::to_cobertura(covr::package_coverage(), filename = "cobertura.xml")
         shell: Rscript {0}
 
       - name: Upload coverage to Codecov
-        if: matrix.config.os == 'ubuntu-latest'
-        uses: codecov/codecov-action@v5
+        if: matrix.config.os == 'ubuntu-latest' && matrix.config.r == 'release'
+        uses: codecov/codecov-action@v7
         with:
           files: cobertura.xml
           token: ${{ secrets.CODECOV_TOKEN }}
