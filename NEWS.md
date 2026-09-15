@@ -55,3 +55,34 @@ contract the rest will be built against.
 * `print.focex_descriptor()` no longer uses `$` to read `sign_off`, which
   could partial-match a similarly-named field (e.g. a draft `sign_off_draft`)
   and print its contents as if the descriptor were actually signed.
+* `read_descriptor()` now parses the file with `jsonlite::read_json()`
+  instead of `fromJSON()`, and reads integers with `bigint_as_char = TRUE`.
+  Previously: (a) a file whose bare filename happened to itself be valid
+  JSON (e.g. one literally named `2026`) was parsed as that literal value
+  instead of ever being opened; (b) an integer field (e.g. `seed`) past
+  2^53 silently rounded, since an R double can't represent it exactly past
+  that point. **Backend authors: a field like `model$seed` may now arrive
+  as a character string rather than a number**, if and only if its value
+  in the descriptor exceeds 2^53 -- check with `is.character()` before
+  doing arithmetic on it if that's a realistic possibility for your
+  backend. (Values beyond the signed 64-bit range, roughly 9.2
+  quintillion, still round silently; not a realistic concern for a seed.)
+* The built-in `"inspect"` backend now reads submitted-model fields
+  (`model_id`, `compartments`, `error_model`, `covariates`,
+  `estimation_method`, `seed`) with `[[` instead of `$`, closing the same
+  partial-match class of bug fixed elsewhere: a model missing `seed` but
+  carrying a similarly-named `seed_source` no longer has that value
+  reported as the seed.
+* `register_backend()`/`resolve_backend()` reject a `name` containing any
+  whitespace anywhere (leading, trailing, or internal -- including exotic
+  Unicode whitespace such as a lone non-breaking space, previously
+  accepted) or invalid UTF-8, and cap it at 200 bytes. A name like
+  `" inspect"` previously registered as a distinct, visually near-identical
+  entry alongside the real `"inspect"`, and a name over 10000 bytes crashed
+  with R's own internal "variable names are limited to 10000 bytes" instead
+  of a package message. The error for an invalid name now says what the
+  rule actually is (`must be a short identifier: 1-200 bytes, no
+  whitespace`) rather than just `must be a non-empty string`.
+* `execute()` now validates `backend` and `descriptor` itself, so a mistake
+  there is reported using `execute()`'s own parameter names instead of
+  `resolve_backend()`'s/`read_descriptor()`'s (`name`/`path`).
