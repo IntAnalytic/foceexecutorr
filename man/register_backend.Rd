@@ -43,7 +43,10 @@ Invisibly, the registered name.
 Register an estimation backend
 }
 \examples{
+# overwrite = TRUE makes this example safe to run more than once in the
+# same session -- without it, registering "demo" a second time would hit
+# the overwrite guard documented above.
 register_backend("demo", function(descriptor, model, data_path, ...) list(ok = TRUE),
-                 official = FALSE, description = "example")
+                 official = FALSE, description = "example", overwrite = TRUE)
 "demo" \%in\% backends()$name
 }

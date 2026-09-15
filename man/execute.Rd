@@ -14,7 +14,11 @@ runs nothing -- a default that cannot be mistaken for a result.}
 
 \item{data_path}{Optional path to the analysis-ready dataset. The descriptor
 names its dataset by catalogue id, not by path, so a caller running outside
-the originating system has to say where the data actually is.}
+the originating system has to say where the data actually is. Always
+passed to the backend, even when omitted here -- an omitted \code{data_path}
+reaches \code{run()} as an explicit \code{NULL}, not as an absent argument, so a
+backend wanting its own default for a missing data path must check for
+\code{NULL} itself rather than relying on argument matching.}
 
 \item{...}{Passed to the backend. May not include \code{descriptor}, \code{model}, or
 \code{data_path} -- those are always the ones execute() itself resolved.}
