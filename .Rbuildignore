@@ -3,3 +3,4 @@
 ^.*\.Rproj$
 ^README\.md$
 ^\.gitignore$
+^cran-comments\.md$

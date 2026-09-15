@@ -1,6 +1,6 @@
 Package: foceexecutorr
 Title: Execute a Signed Population-PK Model Descriptor Against a Pluggable Backend
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: c(
     person("Intelligent", "Analytics", role = c("aut", "cre"),
            email = "sahmed_ai@intanalytic.com"),
