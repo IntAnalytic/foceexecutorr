@@ -9,6 +9,17 @@ test_that("execute() rejects a non-descriptor, non-path input with a clear messa
   expect_error(execute(list()), "must be a", fixed = TRUE)
 })
 
+test_that("execute()'s own argument errors name execute()'s own parameters", {
+  d <- read_descriptor(fixture())
+  # Previously delegated straight to resolve_backend()/read_descriptor(),
+  # surfacing THEIR parameter names ("name", "path") instead of the ones
+  # this call actually used ("backend", "descriptor").
+  expect_error(execute(d, backend = 1), "`backend` must be a non-empty string",
+               fixed = TRUE)
+  expect_error(execute(c("a", "b")), "`descriptor` must be a single file path",
+               fixed = TRUE)
+})
+
 test_that("execute accepts a path or a descriptor and reports both ways the same", {
   from_path <- execute(fixture())
   from_obj <- execute(read_descriptor(fixture()))
@@ -36,6 +47,15 @@ test_that("the result carries the model the descriptor actually chose", {
   # would still pass if the backend reported the wrong id there while the
   # outer field stayed correct.
   expect_equal(res$result$would_run$model_id, chosen_model(d)$model_id)
+})
+
+test_that("would_run$covariates falls back to character() when there are none", {
+  d <- read_descriptor(fixture())
+  d$structural_selection$submitted_models[[2]]$covariates <- NULL
+
+  res <- execute(d)
+
+  expect_equal(res$result$would_run$covariates, character())
 })
 
 test_that("the result carries the descriptor's run_id, not a placeholder", {

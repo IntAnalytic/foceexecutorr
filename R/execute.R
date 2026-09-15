@@ -15,7 +15,11 @@
 #'   runs nothing -- a default that cannot be mistaken for a result.
 #' @param data_path Optional path to the analysis-ready dataset. The descriptor
 #'   names its dataset by catalogue id, not by path, so a caller running outside
-#'   the originating system has to say where the data actually is.
+#'   the originating system has to say where the data actually is. Always
+#'   passed to the backend, even when omitted here -- an omitted `data_path`
+#'   reaches `run()` as an explicit `NULL`, not as an absent argument, so a
+#'   backend wanting its own default for a missing data path must check for
+#'   `NULL` itself rather than relying on argument matching.
 #' @param ... Passed to the backend. May not include `descriptor`, `model`, or
 #'   `data_path` -- those are always the ones execute() itself resolved.
 #' @return An object of class `focex_result`.
@@ -32,13 +36,24 @@ execute <- function(descriptor, backend = "inspect", data_path = NULL, ...) {
          "would let a caller substitute a different model or descriptor than the one ",
          "the result reports.", call. = FALSE)
   }
+  # Validated here, using execute()'s own parameter names, rather than left
+  # to read_descriptor()/resolve_backend(): those report failures about
+  # `path`/`name`, arguments this function's caller never actually passed,
+  # e.g. execute(backend = 1) would otherwise surface "`name` must be a
+  # non-empty string" instead of naming `backend`.
   if (is.character(descriptor)) {
+    if (length(descriptor) != 1L || is.na(descriptor)) {
+      stop("`descriptor` must be a single file path when given as a string.", call. = FALSE)
+    }
     descriptor <- read_descriptor(descriptor)
   }
   if (!inherits(descriptor, "focex_descriptor")) {
     stop("`descriptor` must be a `focex_descriptor` (from read_descriptor()) or a path ",
          "to a model.json, not ", article_for(class(descriptor)[1]), " ", class(descriptor)[1],
          ".", call. = FALSE)
+  }
+  if (!is_nonempty_name(backend)) {
+    stop("`backend` must be a non-empty string naming a registered backend.", call. = FALSE)
   }
   b <- resolve_backend(backend)
   model <- chosen_model(descriptor)
