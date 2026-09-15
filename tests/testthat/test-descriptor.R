@@ -81,6 +81,11 @@ test_that("a submitted model missing model_id fails with a descriptor-level mess
   expect_error(chosen_model(d), "missing a valid `model_id`", fixed = TRUE)
 })
 
+test_that("chosen_model() rejects a non-descriptor with a clear message", {
+  expect_error(chosen_model(5), "focex_descriptor")
+  expect_error(chosen_model(list()), "focex_descriptor")
+})
+
 test_that("empty structural_selection fails clearly instead of inside vapply", {
   d <- read_descriptor(fixture())
   d$structural_selection <- list()
@@ -153,4 +158,81 @@ test_that("a null schema_version is refused as a missing field", {
   jsonlite::write_json(raw, tmp, auto_unbox = TRUE, null = "null")
 
   expect_error(read_descriptor(tmp), "missing required field.*schema_version")
+})
+
+test_that("a boolean schema_version is refused, not coerced to 1", {
+  tmp <- tempfile(fileext = ".json")
+  writeLines(sub('"schema_version": 1,', '"schema_version": true,',
+                 readLines(fixture(), warn = FALSE), fixed = TRUE),
+             tmp)
+
+  expect_error(read_descriptor(tmp), "schema version")
+})
+
+test_that("a schema_version string is only accepted if it is digits only", {
+  reject_as <- function(literal_json_value) {
+    tmp <- tempfile(fileext = ".json")
+    writeLines(sub('"schema_version": 1,', paste0('"schema_version": ', literal_json_value, ','),
+                   readLines(fixture(), warn = FALSE), fixed = TRUE),
+               tmp)
+    expect_error(read_descriptor(tmp), "schema version")
+  }
+  reject_as('"0x1"')
+  reject_as('" 1 "')
+  reject_as('"1e0"')
+})
+
+test_that("a scalar top-level JSON document is refused by name, not a crash", {
+  for (literal_json in c('"hello"', "5", "true")) {
+    tmp <- tempfile(fileext = ".json")
+    writeLines(literal_json, tmp)
+    expect_error(read_descriptor(tmp), "missing required field")
+  }
+})
+
+test_that("a non-object structural_selection fails clearly instead of crashing", {
+  d <- read_descriptor(fixture())
+  d$structural_selection <- "foo"
+  expect_error(chosen_model(d), "structural_selection must be an object")
+
+  d2 <- read_descriptor(fixture())
+  d2$structural_selection <- 5
+  expect_error(chosen_model(d2), "structural_selection must be an object")
+})
+
+test_that("submitted_models entries that are not objects fail clearly instead of crashing", {
+  d <- read_descriptor(fixture())
+  d$structural_selection$submitted_models <- list("1cmt", "2cmt")
+  expect_error(chosen_model(d), "must be an object")
+})
+
+test_that("duplicate .source keys in the JSON are all stripped, not just the first", {
+  tmp <- tempfile(fileext = ".json")
+  lines <- readLines(fixture(), warn = FALSE)
+  lines <- append(lines,
+                   c('  ".source": "/attacker/first",',
+                     '  ".source": "/attacker/second",'),
+                   after = 1)
+  writeLines(lines, tmp)
+
+  d <- read_descriptor(tmp)
+
+  expect_equal(d$.source, tmp)
+})
+
+test_that("print() shows who signed off when sign_off is actually present", {
+  d <- read_descriptor(fixture())
+
+  out <- capture.output(print(d))
+
+  expect_true(any(grepl("signed by: Safi Ahmed", out, fixed = TRUE)))
+})
+
+test_that("print() does not partial-match sign_off onto a similarly named field", {
+  d <- read_descriptor(fixture())
+  d$sign_off <- NULL
+  d$sign_off_draft <- list(actor = "DRAFT")
+
+  out <- capture.output(print(d))
+  expect_false(any(grepl("signed by", out, fixed = TRUE)))
 })

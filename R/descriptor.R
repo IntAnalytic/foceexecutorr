@@ -39,9 +39,14 @@ read_descriptor <- function(path) {
   }
   raw <- jsonlite::fromJSON(path, simplifyVector = FALSE)
   required <- c("schema_version", "run_id", "dataset_path", "structural_selection")
+  # A top-level JSON scalar ("hello", 5, true) parses to an atomic vector,
+  # not a list; `[[` on it errors ("subscript out of bounds") instead of
+  # returning NULL, so treat it as an object with none of the required
+  # fields rather than indexing into it directly.
+  fields <- if (is.list(raw)) raw else list()
   # A key that is present but explicitly `null` is indistinguishable from an
   # absent one here on purpose: both leave nothing downstream can use.
-  missing <- required[vapply(required, function(f) is.null(raw[[f]]), logical(1))]
+  missing <- required[vapply(required, function(f) is.null(fields[[f]]), logical(1))]
   if (length(missing) > 0L) {
     stop("descriptor is missing required field(s): ", paste(missing, collapse = ", "),
          ". Is this a model.json?", call. = FALSE)
@@ -52,10 +57,11 @@ read_descriptor <- function(path) {
          SUPPORTED_SCHEMA_VERSION, ". Upgrade foceexecutorr rather than editing the descriptor -- ",
          "it is a signed record.", call. = FALSE)
   }
-  # Strip any field the descriptor itself happens to carry under this name
-  # first -- `c()` keeps the first match for a duplicated list name, so an
-  # untrusted `.source` in the JSON would otherwise shadow the real path.
-  raw[[".source"]] <- NULL
+  # Strip every field the descriptor itself carries under this name first --
+  # a duplicated JSON key parses to duplicate list entries, and `[[<-`
+  # clears only the first match, so a repeated `.source` key would still
+  # shadow the real path with `raw[[".source"]] <- NULL` alone.
+  raw <- raw[names(raw) != ".source"]
   structure(c(raw, list(.source = path)), class = "focex_descriptor")
 }
 
@@ -63,13 +69,23 @@ read_descriptor <- function(path) {
 # numeric string are all the same "1" to anything that isn't R -- so the
 # check has to be on value, not representation, or a descriptor gets
 # rejected for a serialisation detail a signed pipeline never promised to
-# avoid.
+# avoid. That leniency stops at type, though: a JSON boolean is not a
+# version number, and a string is only a number if it's nothing else --
+# `as.numeric()` alone would also accept "0x1", " 1 " and "1e0".
 is_supported_schema_version <- function(version) {
   if (is.null(version) || is.list(version) || length(version) != 1L) {
     return(FALSE)
   }
-  numeric_version <- suppressWarnings(as.numeric(version))
-  !is.na(numeric_version) && numeric_version == SUPPORTED_SCHEMA_VERSION
+  if (is.logical(version)) {
+    return(FALSE)
+  }
+  if (is.numeric(version)) {
+    return(!is.na(version) && version == SUPPORTED_SCHEMA_VERSION)
+  }
+  if (is.character(version) && grepl("^[0-9]+$", version)) {
+    return(as.numeric(version) == SUPPORTED_SCHEMA_VERSION)
+  }
+  FALSE
 }
 
 describe_schema_version <- function(version) {
@@ -101,8 +117,12 @@ print.focex_descriptor <- function(x, ...) {
     cat("  model:    ", chosen$model_id, " (", chosen$compartments, "-compartment, ",
         chosen$error_model, " error)\n", sep = "")
   }
-  if (!is.null(x$sign_off$actor)) {
-    cat("  signed by:", x$sign_off$actor, "at", x$sign_off$decided_at, "\n")
+  # `[[`, not `$`: with `sign_off` absent but a similarly-named field (e.g.
+  # a draft `sign_off_draft`) present, `$` would partial-match onto it and
+  # print that field's contents as if the descriptor were actually signed.
+  sign_off <- x[["sign_off"]]
+  if (is.list(sign_off) && !is.null(sign_off[["actor"]])) {
+    cat("  signed by:", sign_off[["actor"]], "at", sign_off[["decided_at"]], "\n")
   }
   invisible(x)
 }
@@ -125,18 +145,28 @@ print.focex_descriptor <- function(x, ...) {
 #' chosen_model(d)$model_id
 #' @export
 chosen_model <- function(descriptor) {
-  stopifnot(inherits(descriptor, "focex_descriptor"))
+  if (!inherits(descriptor, "focex_descriptor")) {
+    stop("`descriptor` must be a `focex_descriptor` from read_descriptor(), not a ",
+         class(descriptor)[1], ".", call. = FALSE)
+  }
   # `[[` throughout, not `$`: partial name matching on a field like
   # `chosen_model_id` would let a similarly-named field (e.g. a
   # `chosen_model_id_prev` left by an older pipeline version) resolve
   # silently instead of the one the descriptor actually names.
   sel <- descriptor[["structural_selection"]]
+  if (!is.list(sel)) {
+    stop("descriptor's structural_selection must be an object, not a ",
+         class(sel)[1], ".", call. = FALSE)
+  }
   submitted <- sel[["submitted_models"]]
   if (!is.list(submitted) || length(submitted) == 0L) {
     stop("descriptor's structural_selection has no submitted_models to choose from.",
          call. = FALSE)
   }
   ids <- vapply(submitted, function(m) {
+    if (!is.list(m)) {
+      stop("a submitted model must be an object, not a ", class(m)[1], ".", call. = FALSE)
+    }
     id <- m[["model_id"]]
     if (is.null(id) || length(id) != 1L || !is.character(id)) {
       stop("a submitted model is missing a valid `model_id`.", call. = FALSE)
