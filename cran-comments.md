@@ -8,9 +8,10 @@ This is a new release (first submission to CRAN).
 * GitHub Actions (`.github/workflows/R-CMD-check.yaml`): ubuntu-latest,
   macos-latest, windows-latest on R release; ubuntu-latest on R-devel and
   R 4.1 (the `Depends` floor)
-* win-builder (devel and release): **not yet run** -- run
-  `devtools::check_win_devel()` / `check_win_release()` before submitting
-* R-hub: **not yet run** -- run `rhub::rhub_check()` before submitting
+* win-builder (devel and release): submitted 2026-09-15; results pending
+  by e-mail to the Maintainer address
+* R-hub (linux, windows, macos): submitted 2026-09-15 via the
+  `.github/workflows/rhub.yaml` GitHub Actions workflow
 
 ## R CMD check results
 
