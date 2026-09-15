@@ -3,6 +3,9 @@
 \name{SUPPORTED_SCHEMA_VERSION}
 \alias{SUPPORTED_SCHEMA_VERSION}
 \title{The descriptor schema version this package executes}
+\format{
+An integer scalar.
+}
 \usage{
 SUPPORTED_SCHEMA_VERSION
 }

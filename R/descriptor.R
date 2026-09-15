@@ -110,6 +110,7 @@ describe_schema_version <- function(version) {
 #' handing over a descriptor should be able to ask, rather than parse an error
 #' message -- a lesson taken from integrating against a library that offered no
 #' such constant.
+#' @format An integer scalar.
 #' @export
 SUPPORTED_SCHEMA_VERSION <- 1L
 
