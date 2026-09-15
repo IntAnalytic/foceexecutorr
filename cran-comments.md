@@ -8,8 +8,12 @@ This is a new release (first submission to CRAN).
 * GitHub Actions (`.github/workflows/R-CMD-check.yaml`): ubuntu-latest,
   macos-latest, windows-latest on R release; ubuntu-latest on R-devel and
   R 4.1 (the `Depends` floor)
-* win-builder (devel and release): submitted 2026-09-15; results pending
-  by e-mail to the Maintainer address
+* win-builder release (R 4.6.1): 1 NOTE -- "CRAN incoming feasibility":
+  `New submission` plus the same possibly-misspelled DESCRIPTION words
+  noted below (BLQ, Backends, orchestrator's, pharmacokinetic,
+  pluggable). PDF and HTML manuals built cleanly. Everything else OK.
+* win-builder devel: submitted 2026-09-15; results pending by e-mail to
+  the Maintainer address
 * R-hub (linux, windows, macos; R-devel), via the
   `.github/workflows/rhub.yaml` GitHub Actions workflow: clean on all
   three -- `Status: OK`, no errors/warnings/notes
