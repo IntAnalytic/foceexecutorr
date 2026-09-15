@@ -10,8 +10,10 @@ This is a new release (first submission to CRAN).
   R 4.1 (the `Depends` floor)
 * win-builder (devel and release): submitted 2026-09-15; results pending
   by e-mail to the Maintainer address
-* R-hub (linux, windows, macos): submitted 2026-09-15 via the
-  `.github/workflows/rhub.yaml` GitHub Actions workflow
+* R-hub (linux, windows, macos; R-devel), via the
+  `.github/workflows/rhub.yaml` GitHub Actions workflow: clean on all
+  three -- `Status: OK`, no errors/warnings/notes
+  (https://github.com/IntAnalytic/foceexecutorr/actions/runs/34979143754)
 
 ## R CMD check results
 
