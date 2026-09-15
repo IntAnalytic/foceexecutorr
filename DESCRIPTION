@@ -1,18 +1,19 @@
 Package: foceexecutorr
-Title: Execute a Signed Population-PK Model Descriptor Against a Pluggable Backend
+Title: Execute Population-PK Model Descriptors Against a Backend
 Version: 0.1.0
 Authors@R: c(
     person("Safi", "Ahmed", role = c("aut", "cre"),
            email = "sahmed_ai@intanalytic.com"),
     person("Intelligent Analytics", role = "cph"))
 Description: Takes the signed 'model.json' descriptor emitted by the 'sentinel-poppk'
-    workflow at report sign-off and executes the model it specifies against a
-    pluggable estimation backend. Backends are registered rather than hard-coded,
-    so the same descriptor can be run against a fast approximate estimator for a
-    preview or against 'NONMEM' for an official result. This package owns execution
-    only: assembling data, imputation and BLQ handling, and organising outputs are
-    the orchestrator's job, not this one.
-License: Apache License (== 2.0) | file LICENSE
+    workflow at report sign-off and executes the population pharmacokinetic
+    (PK) model it specifies against a pluggable estimation backend. Backends
+    are registered rather than hard-coded, so the same descriptor can be run
+    against a fast approximate estimator for a preview or against 'NONMEM' for
+    an official result. This package owns execution only: assembling data,
+    imputation and handling of values below the limit of quantification (BLQ),
+    and organising outputs are the orchestrator's job, not this one.
+License: Apache License (== 2.0)
 Encoding: UTF-8
 Language: en-GB
 URL: https://github.com/IntAnalytic/foceexecutorr
