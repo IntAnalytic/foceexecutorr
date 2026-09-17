@@ -9,7 +9,7 @@ package takes that file and runs the model it specifies.
 
 It owns **execution only**. Assembling data, imputation and BLQ handling, and
 organising outputs belong to the orchestrator, which is a separate package
-([ADR-0029](https://github.com/IntAnalytic/sentinel-poppk/blob/main/docs/decisions/0029-second-lane-two-r-packages-executor-beside-orchestrator.md)).
+(ADR-0029 in the `sentinel-poppk` repository).
 
 ## Status
 
