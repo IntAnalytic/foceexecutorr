@@ -12,9 +12,10 @@ This is a new release (first submission to CRAN).
   `New submission` plus the same possibly-misspelled DESCRIPTION words
   noted below (BLQ, Backends, orchestrator's, pharmacokinetic,
   pluggable). PDF and HTML manuals built cleanly. Everything else OK.
-* win-builder devel: re-submitted 2026-09-23 (original 2026-09-15
-  submission's result e-mail never arrived); results pending by e-mail to
-  the Maintainer address
+* win-builder devel (R Under development, unstable, 2026-09-21 r90579):
+  1 NOTE -- same "CRAN incoming feasibility" NOTE as release (`New
+  submission` plus the possibly-misspelled DESCRIPTION words noted
+  below). PDF and HTML manuals built cleanly. Everything else OK.
 * R-hub (linux, windows, macos; R-devel), via the
   `.github/workflows/rhub.yaml` GitHub Actions workflow: clean on all
   three -- `Status: OK`, no errors/warnings/notes
