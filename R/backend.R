@@ -141,6 +141,46 @@ resolve_backend <- function(name) {
       # `[[`, not `$`: a submitted model missing e.g. `seed` but carrying a
       # similarly-named field (`seed_source`) would otherwise have that
       # field's value silently reported as the seed in this summary.
+      #
+      # `covariates` first, `declared_covariates` as a fallback -- NOT the
+      # other way around. `covariates` is confirmed: chosen_model() resolves
+      # through covariate_search when that gate ran, and a ladder entry's
+      # `covariates` there already holds the real, retained relationships
+      # (e.g. "age:CL"). `declared_covariates` is only ever a candidate list
+      # -- what was proposed for testing, not what a run actually kept (e.g.
+      # v2's `declared_covariates` on the chosen structural candidate lists
+      # sex even though the covariate search that later ran on this exact
+      # descriptor dropped it). Preferring the confirmed field whenever it
+      # has content, rather than always preferring `declared_covariates`
+      # first, is what makes this fallback correct: `covariates` is only
+      # ever empty on a structural_selection entry with no covariate_search
+      # yet (covariate testing hasn't run, so `declared_covariates` -- mere
+      # candidates -- is the only signal available), never once a real
+      # result exists to prefer instead.
+      #
+      # `length(x) > 0L` alone -- no `is.list()` guard -- is the presence
+      # check for `covariates`: it's what correctly treats NULL, an empty
+      # array (`[]`, e.g. on a v2 structural_selection entry), AND an empty
+      # atomic vector all as "not present," without also rejecting a
+      # non-empty ATOMIC vector as if it were absent. `is.list()` would: a
+      # descriptor read via read_descriptor() always has `covariates` as a
+      # list (arrays parse with `simplifyVector = FALSE`), but nothing stops
+      # a caller from assigning a plain character vector directly (the same
+      # way several tests in this package mutate other fields), and
+      # `is.list(c("weight", "age"))` is FALSE even though the data is real.
+      #
+      # NOTE: `would_run$covariates` does not have one consistent shape --
+      # bare candidate names (e.g. "age") from the declared_covariates
+      # fallback, or "param:covariate" relationship strings (e.g. "age:CL")
+      # once covariate_search has resolved a model. A caller can't tell which
+      # it's looking at from the field alone. Left as-is for now: the
+      # `inspect` backend's own contract is a human-facing summary ("reports
+      # what would be executed; runs nothing"), not a stable machine-readable
+      # one, so this is a known, accepted rough edge rather than a fix that's
+      # obviously worth the added shape (e.g. a separate boolean flag) yet.
+      own_covariates <- model[["covariates"]]
+      declared <- model[["declared_covariates"]]
+      covariates <- if (length(own_covariates) > 0L) own_covariates else declared
       list(
         executed = FALSE,
         reason = "the 'inspect' backend runs no estimation",
@@ -148,7 +188,8 @@ resolve_backend <- function(name) {
           model_id = model[["model_id"]],
           compartments = model[["compartments"]],
           error_model = model[["error_model"]],
-          covariates = unlist(model[["covariates"]]) %||% character(),
+          absorption = model[["absorption"]],
+          covariates = unlist(covariates) %||% character(),
           estimation_method = model[["estimation_method"]],
           seed = model[["seed"]],
           dataset = descriptor[["dataset_path"]],

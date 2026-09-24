@@ -1,0 +1,322 @@
+{
+  "schema_version": 2,
+  "run_id": "run-fbd67a28-06a8-40b4-9cb1-e14e6cc49ff3",
+  "project_id": "STUDY-01",
+  "parent_run_id": null,
+  "dataset_path": "demo_ivbolus_2cmt_combined",
+  "structural_selection": {
+    "submitted_models": [
+      {
+        "model_id": "1cmt",
+        "label": "1-compartment",
+        "compartments": 1,
+        "error_model": "combined",
+        "absorption": "iv-bolus",
+        "covariates": [],
+        "declared_covariates": [
+          "age",
+          "weight",
+          "sex"
+        ],
+        "estimation_method": "FOCE-I",
+        "seed": 137,
+        "force_outcome": null
+      },
+      {
+        "model_id": "2cmt",
+        "label": "2-compartment",
+        "compartments": 2,
+        "error_model": "combined",
+        "absorption": "iv-bolus",
+        "covariates": [],
+        "declared_covariates": [
+          "age",
+          "weight",
+          "sex"
+        ],
+        "estimation_method": "FOCE-I",
+        "seed": 911,
+        "force_outcome": null
+      }
+    ],
+    "spec_fingerprint": "3a13fb7f12c732edb022053fe59d42caf67cad2befab87a378bfb9e613b34018",
+    "chosen_model_id": "2cmt",
+    "recommended_model_id": "2cmt",
+    "accepted_recommendation": true,
+    "actor": "Safi Ahmed",
+    "rationale": "",
+    "decided_at": "2026-09-24T15:05:43.793935+00:00"
+  },
+  "covariate_search": {
+    "submitted_ladder": [
+      {
+        "model_id": "cov-step0",
+        "label": "Base (no covariates)",
+        "compartments": 2,
+        "error_model": "combined",
+        "absorption": "iv-bolus",
+        "covariates": [],
+        "declared_covariates": null,
+        "estimation_method": "FOCE-I",
+        "seed": 1,
+        "force_outcome": null
+      },
+      {
+        "model_id": "cov-step1",
+        "label": "+ WT on CL",
+        "compartments": 2,
+        "error_model": "combined",
+        "absorption": "iv-bolus",
+        "covariates": [
+          "weight:CL"
+        ],
+        "declared_covariates": null,
+        "estimation_method": "FOCE-I",
+        "seed": 1,
+        "force_outcome": null
+      },
+      {
+        "model_id": "cov-step2",
+        "label": "+ WT on V1",
+        "compartments": 2,
+        "error_model": "combined",
+        "absorption": "iv-bolus",
+        "covariates": [
+          "weight:CL",
+          "weight:V1"
+        ],
+        "declared_covariates": null,
+        "estimation_method": "FOCE-I",
+        "seed": 1,
+        "force_outcome": null
+      },
+      {
+        "model_id": "cov-step3",
+        "label": "+ AGE on CL",
+        "compartments": 2,
+        "error_model": "combined",
+        "absorption": "iv-bolus",
+        "covariates": [
+          "weight:CL",
+          "weight:V1",
+          "age:CL"
+        ],
+        "declared_covariates": null,
+        "estimation_method": "FOCE-I",
+        "seed": 1,
+        "force_outcome": null
+      },
+      {
+        "model_id": "cov-step4",
+        "label": "+ SEX on CL",
+        "compartments": 2,
+        "error_model": "combined",
+        "absorption": "iv-bolus",
+        "covariates": [
+          "weight:CL",
+          "weight:V1",
+          "age:CL",
+          "sex:CL"
+        ],
+        "declared_covariates": null,
+        "estimation_method": "FOCE-I",
+        "seed": 1,
+        "force_outcome": null
+      }
+    ],
+    "spec_fingerprint": "ac42f69f60819b441804231641a6745c1ac3c1add970f53ab551bac8c3462c3d",
+    "chosen_step": 3,
+    "final_model_id": "cov-step3",
+    "recommended_model_id": "cov-step3",
+    "accepted_recommendation": true,
+    "covariates": [
+      {
+        "relationship": "weight:CL",
+        "covariate": "weight",
+        "param": "CL",
+        "functional_form": "allometric",
+        "label": "WT on CL",
+        "estimate": null
+      },
+      {
+        "relationship": "weight:V1",
+        "covariate": "weight",
+        "param": "V1",
+        "functional_form": "allometric",
+        "label": "WT on V1",
+        "estimate": null
+      },
+      {
+        "relationship": "age:CL",
+        "covariate": "age",
+        "param": "CL",
+        "functional_form": "power",
+        "label": "AGE on CL",
+        "estimate": -0.498625
+      }
+    ],
+    "actor": "Safi Ahmed",
+    "rationale": "",
+    "decided_at": "2026-09-24T15:06:29.239303+00:00"
+  },
+  "parameters": [
+    {
+      "param": "CL",
+      "label": "Clearance",
+      "estimate": 4.057944,
+      "rse_pct": 4.1,
+      "shrinkage_pct": null
+    },
+    {
+      "param": "V1",
+      "label": "Central volume",
+      "estimate": 20.35175,
+      "rse_pct": 3.9,
+      "shrinkage_pct": null
+    },
+    {
+      "param": "Q",
+      "label": "Inter-compartmental clearance",
+      "estimate": 6.364337,
+      "rse_pct": 3.9,
+      "shrinkage_pct": null
+    },
+    {
+      "param": "V2",
+      "label": "Peripheral volume",
+      "estimate": 43.040121,
+      "rse_pct": 5.4,
+      "shrinkage_pct": null
+    },
+    {
+      "param": "AGE_CL",
+      "label": "Covariate effect (age on CL)",
+      "estimate": -0.498625,
+      "rse_pct": 20,
+      "shrinkage_pct": null
+    },
+    {
+      "param": "IIV_CL",
+      "label": "Between-subject CV% (CL)",
+      "estimate": 31.186482,
+      "rse_pct": 9.6,
+      "shrinkage_pct": 3.5
+    },
+    {
+      "param": "IIV_V1",
+      "label": "Between-subject CV% (V1)",
+      "estimate": 31.180878,
+      "rse_pct": 9.2,
+      "shrinkage_pct": 1.2
+    },
+    {
+      "param": "IIV_Q",
+      "label": "Between-subject CV% (Q)",
+      "estimate": 26.759962,
+      "rse_pct": 12,
+      "shrinkage_pct": 13.4
+    },
+    {
+      "param": "IIV_V2",
+      "label": "Between-subject CV% (V2)",
+      "estimate": 37.306202,
+      "rse_pct": 12.3,
+      "shrinkage_pct": 14.7
+    },
+    {
+      "param": "SIGMA_ADD",
+      "label": "SIGMA_ADD",
+      "estimate": 0.052581,
+      "rse_pct": 6.7,
+      "shrinkage_pct": null
+    },
+    {
+      "param": "SIGMA_PROP",
+      "label": "Proportional residual error",
+      "estimate": 0.09911,
+      "rse_pct": 3.6,
+      "shrinkage_pct": null
+    }
+  ],
+  "acceptance": {
+    "max_dofv_threshold": -3.84,
+    "max_rse_pct": 50,
+    "max_shrinkage_pct": 30,
+    "max_condition_number": 1000,
+    "min_vpc_coverage_pct": 90,
+    "npde_p_threshold": 0.05
+  },
+  "qualification": {
+    "disposition": "qualified",
+    "overall_pass": true,
+    "actor": "Safi Ahmed",
+    "rationale": "",
+    "decided_at": "2026-09-24T15:06:52.456590+00:00"
+  },
+  "data_handling": {
+    "run_id": "run-fbd67a28-06a8-40b4-9cb1-e14e6cc49ff3",
+    "total_n": 64,
+    "effective_n": 64,
+    "blq_method": "Propose adopting the M3 method for BLQ handling: retain the 64 sub-LLOQ observations (6.7% of the 960 total) in the dataset and model them via the likelihood contribution for censored observations (probability of being below 0.1), rather than dropping or substituting them.",
+    "imputations": [],
+    "exclusions": [],
+    "overrides": [],
+    "resolutions": [
+      "Units sanity: accepted, no handling proposed (Safi Ahmed)",
+      "BLQ handling: proposed and accepted (Safi Ahmed)"
+    ]
+  },
+  "sign_off": {
+    "session": 1,
+    "actor": "Safi Ahmed",
+    "rationale": "Completed",
+    "methods": "Population pharmacokinetic analysis was conducted using a two-compartment disposition model (structural model \"2cmt\"), selected at the structural_selection gate, with covariate development proceeding to a final covariate model, run cov-step3 (run ID run-fbd67a28-06a8-40b4-9cb1-e14e6cc49ff3). The final model included an effect of age on clearance (AGE_CL). Between-subject variability was estimated on CL, V1, Q, and V2, and residual error was described by a proportional error model.\n\nParameter precision was assessed using a bootstrap procedure comprising 200 seeded parametric draws from a Normal(estimate, SE) distribution, with confidence intervals constructed from the 2.5th and 97.5th percentiles of the resulting distributions; no re-fitting of the model to resampled datasets was performed as part of this procedure, so reported bootstrap RSE% and CIs reflect this parametric-draw approach rather than a full nonparametric case-resampling bootstrap. Predictive performance was evaluated using prediction-corrected visual predictive check (pcVPC) coverage and normalized prediction distribution errors (NPDE), with NPDE distributional assumptions tested via the Jarque\u2013Bera statistic. Model qualification against pre-specified acceptance criteria (maximum bootstrap RSE, maximum \u03b7-shrinkage, condition number, pcVPC coverage, and NPDE normality) was performed at the qualification gate.\n\nData-handling decisions were proposed and accepted prior to this run and are documented here for completeness and audit purposes; none constitutes an executed dataset modification within this run. Specifically, M3 handling of BLQ observations was proposed and accepted: the 64 sub-LLOQ observations (6.7% of the 960 total observations) were proposed to be retained and modeled via the likelihood contribution for censored observations (probability of being below 0.1), rather than being dropped (M1) or substituted with an imputed value (e.g., LLOQ/2). This handling was accepted as appropriate because, at a 6.7% BLQ prevalence, censoring is expected to be concentrated near the tail/trough given the light-NCA profile (median Tmax 0.0833), and a likelihood-based approach uses the full information content of censored records without requiring an arbitrary substituted value. Simple substitution was rejected as a candidate because it can introduce bias in parameter estimates, particularly clearance and terminal-phase-related parameters, in a direction that is not readily defensible. Exclusion of BLQ records was rejected because, at this BLQ fraction, it would discard non-trivial information and risks biasing the concentration-time profile if BLQ observations are not missing at random. More complex mixture/hybrid categorization methods (M5/M6) were rejected as unnecessary given the absence of evidence for widespread or structurally patterned censoring at this prevalence. This decision was flagged as non-blocking by policy; it was accepted by Safi Ahmed on 2026-09-24. No BLQ imputation, exclusion, or other dataset edit has been applied at the time of this report; the M3 approach as accepted describes the intended handling method for the run configuration and is recorded here for the audit trail.",
+    "results": "The final model (cov-step3) produced the following parameter estimates with bootstrap 95% confidence intervals and RSE%: CL (clearance) 4.057944, 95% CI 3.744\u20134.402, bootstrap RSE 4.4%; V1 (central volume) 20.35175, 95% CI 18.886\u201321.979, bootstrap RSE 4.1%; Q (inter-compartmental clearance) 6.364337, 95% CI 5.847\u20136.888, bootstrap RSE 4.0%; V2 (peripheral volume) 43.040121, 95% CI 37.81\u201346.773, bootstrap RSE 5.3%; and the covariate effect of age on CL (AGE_CL) -0.498625, 95% CI -0.678 to -0.318, bootstrap RSE 18.6%. All parameters were flagged as passed at the parameter level.\n\nBetween-subject variability (CV%) estimates were: IIV_CL 31.186482% (RSE 9.6%, shrinkage 3.5%); IIV_V1 31.180878% (RSE 9.2%, shrinkage 1.2%); IIV_Q 26.759962% (RSE 12.0%, shrinkage 13.4%); IIV_V2 37.306202% (RSE 12.3%, shrinkage 14.7%). Proportional residual error (SIGMA_PROP) was estimated at 9.9% CV (RSE 3.6%; shrinkage not applicable).\n\nPredictive performance: pcVPC coverage was 95.9%. NPDE summary statistics were mean -0.045 and variance 0.998, with a Jarque\u2013Bera p-value of 0.1653 for normality, recorded as passed.\n\nAgainst the pre-specified acceptance criteria: maximum bootstrap RSE was observed at 18.6% (target \u226450.0%, passed); maximum \u03b7-shrinkage was observed at 14.7% (target \u226430.0%, passed); condition number was observed at 2.1 (target <1000.0, passed); pcVPC coverage was observed at 95.9% (target \u226590.0%, passed); and NPDE normality (Jarque\u2013Bera p) was observed at 0.165 (target >0.05, passed). Overall pass status for the model was recorded as true.\n\nThe decision trail shows no overrides and no instance of qualification despite failing diagnostics across the data_validation, structural_selection, covariate_search, or qualification gates; the chosen option matched the recommended option at each gate.",
+    "conclusion": "The final population PK model (cov-step3), a two-compartment model with an age effect on clearance, met all five pre-specified acceptance criteria evaluated at the qualification gate: maximum bootstrap RSE, maximum \u03b7-shrinkage, condition number, pcVPC coverage, and NPDE normality were each within their respective targets, and the model was recorded as qualified with overall_pass = true. This qualification was reached via the recommended path at every gate in the decision trail, with no accountable override and no instance of qualification despite failing diagnostics recorded.\n\nPrecision estimates reported here derive from a seeded parametric bootstrap (200 draws from Normal(estimate, SE), no model refitting), which is a more limited method than a full nonparametric bootstrap and should be interpreted accordingly, particularly for the age-on-CL covariate effect, which showed the highest RSE (18.6%) among estimated parameters, still within the pre-specified target.\n\nThe BLQ handling method (M3) applied to the 6.7% of observations below LLOQ was proposed and accepted prior to this run as the intended likelihood-based approach for the run configuration; this report does not assert that any BLQ imputation, exclusion, or other dataset edit has been executed, only that the method was accepted for specification.\n\nThis report states only whether the model met the pre-specified acceptance criteria described above; no intended use of the model has been declared in this analysis, and no statement is made here as to the model's adequacy for any specific application. Determination of fitness for a particular use would require a separate, explicit context-of-use assessment.",
+    "decided_at": "2026-09-24T15:07:36.590343+00:00",
+    "ai_methods": "Population pharmacokinetic analysis was conducted using a two-compartment disposition model (structural model \"2cmt\"), selected at the structural_selection gate, with covariate development proceeding to a final covariate model, run cov-step3 (run ID run-fbd67a28-06a8-40b4-9cb1-e14e6cc49ff3). The final model included an effect of age on clearance (AGE_CL). Between-subject variability was estimated on CL, V1, Q, and V2, and residual error was described by a proportional error model.\n\nParameter precision was assessed using a bootstrap procedure comprising 200 seeded parametric draws from a Normal(estimate, SE) distribution, with confidence intervals constructed from the 2.5th and 97.5th percentiles of the resulting distributions; no re-fitting of the model to resampled datasets was performed as part of this procedure, so reported bootstrap RSE% and CIs reflect this parametric-draw approach rather than a full nonparametric case-resampling bootstrap. Predictive performance was evaluated using prediction-corrected visual predictive check (pcVPC) coverage and normalized prediction distribution errors (NPDE), with NPDE distributional assumptions tested via the Jarque\u2013Bera statistic. Model qualification against pre-specified acceptance criteria (maximum bootstrap RSE, maximum \u03b7-shrinkage, condition number, pcVPC coverage, and NPDE normality) was performed at the qualification gate.\n\nData-handling decisions were proposed and accepted prior to this run and are documented here for completeness and audit purposes; none constitutes an executed dataset modification within this run. Specifically, M3 handling of BLQ observations was proposed and accepted: the 64 sub-LLOQ observations (6.7% of the 960 total observations) were proposed to be retained and modeled via the likelihood contribution for censored observations (probability of being below 0.1), rather than being dropped (M1) or substituted with an imputed value (e.g., LLOQ/2). This handling was accepted as appropriate because, at a 6.7% BLQ prevalence, censoring is expected to be concentrated near the tail/trough given the light-NCA profile (median Tmax 0.0833), and a likelihood-based approach uses the full information content of censored records without requiring an arbitrary substituted value. Simple substitution was rejected as a candidate because it can introduce bias in parameter estimates, particularly clearance and terminal-phase-related parameters, in a direction that is not readily defensible. Exclusion of BLQ records was rejected because, at this BLQ fraction, it would discard non-trivial information and risks biasing the concentration-time profile if BLQ observations are not missing at random. More complex mixture/hybrid categorization methods (M5/M6) were rejected as unnecessary given the absence of evidence for widespread or structurally patterned censoring at this prevalence. This decision was flagged as non-blocking by policy; it was accepted by Safi Ahmed on 2026-09-24. No BLQ imputation, exclusion, or other dataset edit has been applied at the time of this report; the M3 approach as accepted describes the intended handling method for the run configuration and is recorded here for the audit trail.",
+    "ai_results": "The final model (cov-step3) produced the following parameter estimates with bootstrap 95% confidence intervals and RSE%: CL (clearance) 4.057944, 95% CI 3.744\u20134.402, bootstrap RSE 4.4%; V1 (central volume) 20.35175, 95% CI 18.886\u201321.979, bootstrap RSE 4.1%; Q (inter-compartmental clearance) 6.364337, 95% CI 5.847\u20136.888, bootstrap RSE 4.0%; V2 (peripheral volume) 43.040121, 95% CI 37.81\u201346.773, bootstrap RSE 5.3%; and the covariate effect of age on CL (AGE_CL) -0.498625, 95% CI -0.678 to -0.318, bootstrap RSE 18.6%. All parameters were flagged as passed at the parameter level.\n\nBetween-subject variability (CV%) estimates were: IIV_CL 31.186482% (RSE 9.6%, shrinkage 3.5%); IIV_V1 31.180878% (RSE 9.2%, shrinkage 1.2%); IIV_Q 26.759962% (RSE 12.0%, shrinkage 13.4%); IIV_V2 37.306202% (RSE 12.3%, shrinkage 14.7%). Proportional residual error (SIGMA_PROP) was estimated at 9.9% CV (RSE 3.6%; shrinkage not applicable).\n\nPredictive performance: pcVPC coverage was 95.9%. NPDE summary statistics were mean -0.045 and variance 0.998, with a Jarque\u2013Bera p-value of 0.1653 for normality, recorded as passed.\n\nAgainst the pre-specified acceptance criteria: maximum bootstrap RSE was observed at 18.6% (target \u226450.0%, passed); maximum \u03b7-shrinkage was observed at 14.7% (target \u226430.0%, passed); condition number was observed at 2.1 (target <1000.0, passed); pcVPC coverage was observed at 95.9% (target \u226590.0%, passed); and NPDE normality (Jarque\u2013Bera p) was observed at 0.165 (target >0.05, passed). Overall pass status for the model was recorded as true.\n\nThe decision trail shows no overrides and no instance of qualification despite failing diagnostics across the data_validation, structural_selection, covariate_search, or qualification gates; the chosen option matched the recommended option at each gate.",
+    "ai_conclusion": "The final population PK model (cov-step3), a two-compartment model with an age effect on clearance, met all five pre-specified acceptance criteria evaluated at the qualification gate: maximum bootstrap RSE, maximum \u03b7-shrinkage, condition number, pcVPC coverage, and NPDE normality were each within their respective targets, and the model was recorded as qualified with overall_pass = true. This qualification was reached via the recommended path at every gate in the decision trail, with no accountable override and no instance of qualification despite failing diagnostics recorded.\n\nPrecision estimates reported here derive from a seeded parametric bootstrap (200 draws from Normal(estimate, SE), no model refitting), which is a more limited method than a full nonparametric bootstrap and should be interpreted accordingly, particularly for the age-on-CL covariate effect, which showed the highest RSE (18.6%) among estimated parameters, still within the pre-specified target.\n\nThe BLQ handling method (M3) applied to the 6.7% of observations below LLOQ was proposed and accepted prior to this run as the intended likelihood-based approach for the run configuration; this report does not assert that any BLQ imputation, exclusion, or other dataset edit has been executed, only that the method was accepted for specification.\n\nThis report states only whether the model met the pre-specified acceptance criteria described above; no intended use of the model has been declared in this analysis, and no statement is made here as to the model's adequacy for any specific application. Determination of fitness for a particular use would require a separate, explicit context-of-use assessment.",
+    "advisory_source": "sentinel-harness-core",
+    "methods_source": "sentinel-harness-core",
+    "methods_status": "ai",
+    "results_source": "sentinel-harness-core",
+    "results_status": "ai",
+    "conclusion_source": "sentinel-harness-core",
+    "conclusion_status": "ai"
+  },
+  "lineage_path": "lineage.jsonl",
+  "provenance": {
+    "built_at": "2026-09-24T15:07:36.684361+00:00",
+    "app": {
+      "name": "sentinel-poppk",
+      "git_sha": null,
+      "git_dirty": null,
+      "api_version": "0.2.6",
+      "web_version": "0.2.6"
+    },
+    "compute_engine": {
+      "built_with": {
+        "seam": "estimator",
+        "name": "poppk-engine",
+        "version": "0.2.6",
+        "is_official": false
+      },
+      "tested_against": null
+    },
+    "runtime": {
+      "python": "3.12.14",
+      "platform": "Linux-x86_64"
+    },
+    "lineage": {
+      "path": "lineage.jsonl",
+      "sha256": "6a6e2018e47cf24ac6f4177bd4d14e24258dd7aff686615b381e4d0c7177bb89",
+      "lines": 43,
+      "hashed_at": "2026-09-24T15:07:36.684361+00:00"
+    },
+    "dataset": {
+      "id": "demo_ivbolus_2cmt_combined",
+      "sha256": "6b3558cd429b66069f49e9dcfbdf3db5fa5958a9f380c831cc2a1042370327b1"
+    }
+  }
+}

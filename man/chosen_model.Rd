@@ -13,15 +13,23 @@ chosen_model(descriptor)
 A list describing the chosen model.
 }
 \description{
-A descriptor carries every candidate that was submitted, in the order it was
-entered, plus the id of the one chosen at the structural-selection gate. This
-returns the chosen one.
+A descriptor can carry more than one selection gate. \code{structural_selection}
+always exists; \code{covariate_search} -- present once a run went on to test
+covariate relationships -- refines it further. This returns the model
+chosen at the \emph{last} gate that actually ran: \code{covariate_search}'s
+\code{final_model_id} when \code{covariate_search} is present, otherwise
+\code{structural_selection}'s \code{chosen_model_id}.
 }
 \details{
-It reads the submitted tuple rather than trusting a single embedded copy of
-the winner on purpose: the tuple is what the fingerprint covers, and replaying
-one model in isolation does not reproduce the numbers the original run
-produced.
+Reading only \code{structural_selection} would report a bare structural
+candidate -- no covariate effects at all -- as "the chosen model" even when
+the descriptor's own \code{sign_off} describes a covariate-refined model as what
+was actually reported and qualified.
+
+It reads the submitted tuple at that gate rather than trusting a single
+embedded copy of the winner on purpose: the tuple is what the fingerprint
+covers, and replaying one model in isolation does not reproduce the
+numbers the original run produced.
 }
 \examples{
 d <- read_descriptor(system.file("extdata", "model.json", package = "foceexecutorr"))

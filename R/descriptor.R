@@ -1,8 +1,9 @@
 #' Read a signed model descriptor
 #'
-#' Reads the `model.json` that the sentinel-poppk workflow writes to a run's
-#' workspace at report sign-off, and checks that it is one this package knows how
-#' to execute.
+#' Reads the descriptor that the sentinel-poppk workflow writes to a run's
+#' workspace at report sign-off -- named after the run (e.g.
+#' `model-run-<run-id>.json`), not literally `model.json` -- and checks that it
+#' is one this package knows how to execute.
 #'
 #' The descriptor is deliberately the *only* input. It is self-contained by
 #' design: it carries the full model tuple as originally submitted, each paired
@@ -15,7 +16,7 @@
 #' is checked is the thing that actually goes wrong in practice: being handed a
 #' descriptor from a schema version this package predates.
 #'
-#' @param path Path to a `model.json` file.
+#' @param path Path to a descriptor file, e.g. `model-run-<run-id>.json`.
 #' @return An object of class `focex_descriptor`: the parsed descriptor with its
 #'   source path attached.
 #' @seealso [chosen_model()] to resolve which model it selected, [execute()] to run it.
@@ -23,6 +24,11 @@
 #' path <- system.file("extdata", "model.json", package = "foceexecutorr")
 #' d <- read_descriptor(path)
 #' d$run_id
+#'
+#' # schema version 2, named the way sentinel-poppk actually names a descriptor
+#' path2 <- system.file("extdata", "model-run-fbd67a28-06a8-40b4-9cb1-e14e6cc49ff3.json",
+#'                       package = "foceexecutorr")
+#' read_descriptor(path2)$schema_version
 #' @export
 read_descriptor <- function(path) {
   if (!is.character(path) || length(path) != 1L || is.na(path)) {
@@ -53,6 +59,7 @@ read_descriptor <- function(path) {
   # realistic concern for this package, so that residual gap is accepted
   # rather than guarded against.
   raw <- jsonlite::read_json(path, simplifyVector = FALSE, bigint_as_char = TRUE)
+  raw <- normalize_empty_objects(raw)
   required <- c("schema_version", "run_id", "dataset_path", "structural_selection")
   # A top-level JSON scalar ("hello", 5, true) parses to an atomic vector,
   # not a list; `[[` on it errors ("subscript out of bounds") instead of
@@ -64,12 +71,13 @@ read_descriptor <- function(path) {
   missing <- required[vapply(required, function(f) is.null(fields[[f]]), logical(1))]
   if (length(missing) > 0L) {
     stop("descriptor is missing required field(s): ", paste(missing, collapse = ", "),
-         ". Is this a model.json?", call. = FALSE)
+         ". Is this a sentinel-poppk descriptor?", call. = FALSE)
   }
   if (!is_supported_schema_version(raw$schema_version)) {
     found <- describe_schema_version(raw$schema_version)
     stop("descriptor is schema version ", found, "; this package supports ",
-         SUPPORTED_SCHEMA_VERSION, ". Upgrade foceexecutorr rather than editing the descriptor -- ",
+         paste(SUPPORTED_SCHEMA_VERSION, collapse = ", "),
+         ". Upgrade foceexecutorr rather than editing the descriptor -- ",
          "it is a signed record.", call. = FALSE)
   }
   # Strip every field the descriptor itself carries under this name first --
@@ -78,6 +86,32 @@ read_descriptor <- function(path) {
   # shadow the real path with `raw[[".source"]] <- NULL` alone.
   raw <- raw[names(raw) != ".source"]
   structure(c(raw, list(.source = path)), class = "focex_descriptor")
+}
+
+# jsonlite's default JSON writer (`jsonlite::write_json()`/`toJSON()`,
+# without `null = "null"`) serialises an R NULL as `{}`, not `null`. Read a
+# descriptor with `jsonlite::read_json(..., simplifyVector = FALSE)`, save it
+# back out that ordinary way, and read it again, and every field that was
+# originally `null` -- at any depth, not just the ones this package happens
+# to read today -- comes back as an empty *named* list instead of NULL:
+# `is.null(names(x))` is what actually distinguishes it from a genuine empty
+# JSON array (`[]`, an empty *unnamed* list, which must NOT be normalized
+# away -- nothing in this schema uses `{}` as a meaningful value in its own
+# right, but a real empty array, e.g. `"imputations": []`, is not the same
+# thing as absent).
+#
+# Normalized once, here, right after parsing, rather than at each of the
+# many places downstream that read an optional field -- that approach was
+# tried first and missed fields (`absorption`, `seed`) that nothing had
+# reason to specifically suspect until they broke.
+normalize_empty_objects <- function(x) {
+  if (is.list(x)) {
+    if (length(x) == 0L && !is.null(names(x))) {
+      return(NULL)
+    }
+    return(lapply(x, normalize_empty_objects))
+  }
+  x
 }
 
 # schema_version travels through JSON, where an integer, a double and a
@@ -95,10 +129,10 @@ is_supported_schema_version <- function(version) {
   # is.character(TRUE) are both FALSE, so a logical already falls through
   # to the final FALSE below on its own.
   if (is.numeric(version)) {
-    return(!is.na(version) && version == SUPPORTED_SCHEMA_VERSION)
+    return(!is.na(version) && version %in% SUPPORTED_SCHEMA_VERSION)
   }
   if (is.character(version) && grepl("^[0-9]+$", version)) {
-    return(as.numeric(version) == SUPPORTED_SCHEMA_VERSION)
+    return(as.numeric(version) %in% SUPPORTED_SCHEMA_VERSION)
   }
   FALSE
 }
@@ -119,15 +153,24 @@ describe_schema_version <- function(version) {
   as.character(version)
 }
 
-#' The descriptor schema version this package executes
+#' The descriptor schema versions this package can read
 #'
 #' Exported deliberately. An embedder that wants to check compatibility before
 #' handing over a descriptor should be able to ask, rather than parse an error
 #' message -- a lesson taken from integrating against a library that offered no
 #' such constant.
-#' @format An integer scalar.
+#'
+#' This is an integer vector, not a scalar: `schema_version %in%
+#' SUPPORTED_SCHEMA_VERSION` is the correct check, not equality against a
+#' single value. Equality would quietly reject a valid, newer descriptor
+#' instead of accepting it -- e.g. `schema_version == SUPPORTED_SCHEMA_VERSION`
+#' is `FALSE` for a schema v2 descriptor even though `read_descriptor()`
+#' accepts it fine.
+#' @format An integer vector, ascending, of every schema version this package
+#'   accepts -- not just the newest one. A schema v1 descriptor signed before
+#'   sentinel-poppk added v2 is still a valid, executable record.
 #' @export
-SUPPORTED_SCHEMA_VERSION <- 1L
+SUPPORTED_SCHEMA_VERSION <- c(1L, 2L)
 
 #' @export
 print.focex_descriptor <- function(x, ...) {
@@ -136,8 +179,9 @@ print.focex_descriptor <- function(x, ...) {
   cat("  dataset:  ", x$dataset_path, "\n", sep = "")
   chosen <- tryCatch(chosen_model(x), error = function(e) NULL)
   if (!is.null(chosen)) {
+    absorption <- if (is.null(chosen[["absorption"]])) "" else paste0(", ", chosen[["absorption"]])
     cat("  model:    ", chosen$model_id, " (", chosen$compartments, "-compartment, ",
-        chosen$error_model, " error)\n", sep = "")
+        chosen$error_model, " error", absorption, ")\n", sep = "")
   }
   # `[[`, not `$`: with `sign_off` absent but a similarly-named field (e.g.
   # a draft `sign_off_draft`) present, `$` would partial-match onto it and
@@ -151,14 +195,22 @@ print.focex_descriptor <- function(x, ...) {
 
 #' Resolve the model a descriptor selected
 #'
-#' A descriptor carries every candidate that was submitted, in the order it was
-#' entered, plus the id of the one chosen at the structural-selection gate. This
-#' returns the chosen one.
+#' A descriptor can carry more than one selection gate. `structural_selection`
+#' always exists; `covariate_search` -- present once a run went on to test
+#' covariate relationships -- refines it further. This returns the model
+#' chosen at the *last* gate that actually ran: `covariate_search`'s
+#' `final_model_id` when `covariate_search` is present, otherwise
+#' `structural_selection`'s `chosen_model_id`.
 #'
-#' It reads the submitted tuple rather than trusting a single embedded copy of
-#' the winner on purpose: the tuple is what the fingerprint covers, and replaying
-#' one model in isolation does not reproduce the numbers the original run
-#' produced.
+#' Reading only `structural_selection` would report a bare structural
+#' candidate -- no covariate effects at all -- as "the chosen model" even when
+#' the descriptor's own `sign_off` describes a covariate-refined model as what
+#' was actually reported and qualified.
+#'
+#' It reads the submitted tuple at that gate rather than trusting a single
+#' embedded copy of the winner on purpose: the tuple is what the fingerprint
+#' covers, and replaying one model in isolation does not reproduce the
+#' numbers the original run produced.
 #'
 #' @param descriptor A `focex_descriptor` from [read_descriptor()].
 #' @return A list describing the chosen model.
@@ -171,38 +223,58 @@ chosen_model <- function(descriptor) {
     stop("`descriptor` must be a `focex_descriptor` from read_descriptor(), not ",
          article_for(class(descriptor)[1]), " ", class(descriptor)[1], ".", call. = FALSE)
   }
-  # `[[` throughout, not `$`: partial name matching on a field like
-  # `chosen_model_id` would let a similarly-named field (e.g. a
-  # `chosen_model_id_prev` left by an older pipeline version) resolve
-  # silently instead of the one the descriptor actually names.
-  sel <- descriptor[["structural_selection"]]
-  if (!is.list(sel)) {
-    stop("descriptor's structural_selection must be an object, not ",
-         article_for(class(sel)[1]), " ", class(sel)[1], ".", call. = FALSE)
+  # `[[`, not `$`: a `covariate_search` that is `null` -- the convention
+  # read_descriptor() already uses for "this doesn't apply" -- means the gate
+  # never ran, same as the key being absent entirely. A plain `is.null()`
+  # check is enough: read_descriptor() already normalizes the empty-object
+  # shape jsonlite's own JSON writer produces for a round-tripped NULL back
+  # to a real NULL before this ever runs (see normalize_empty_objects()). A
+  # covariate_search that is present but genuinely malformed (some other,
+  # non-empty, non-object value) still fails loudly in resolve_gate() below.
+  cov <- descriptor[["covariate_search"]]
+  if (!is.null(cov)) {
+    return(resolve_gate(cov, "covariate_search", "submitted_ladder", "final_model_id"))
   }
-  submitted <- sel[["submitted_models"]]
+  resolve_gate(descriptor[["structural_selection"]], "structural_selection",
+               "submitted_models", "chosen_model_id")
+}
+
+# Shared by chosen_model()'s two gates -- structural_selection and
+# covariate_search have the same shape (a submitted list plus the id of the
+# one chosen from it), just under different field names.
+#
+# `[[` throughout, not `$`: partial name matching on a field like
+# `chosen_model_id` would let a similarly-named field (e.g. a
+# `chosen_model_id_prev` left by an older pipeline version) resolve silently
+# instead of the one the descriptor actually names.
+resolve_gate <- function(gate, gate_name, submitted_field, chosen_field) {
+  if (!is.list(gate)) {
+    stop("descriptor's ", gate_name, " must be an object, not ",
+         article_for(class(gate)[1]), " ", class(gate)[1], ".", call. = FALSE)
+  }
+  submitted <- gate[[submitted_field]]
   if (!is.list(submitted) || length(submitted) == 0L) {
-    stop("descriptor's structural_selection has no submitted_models to choose from.",
+    stop("descriptor's ", gate_name, " has no ", submitted_field, " to choose from.",
          call. = FALSE)
   }
   ids <- vapply(submitted, function(m) {
     if (!is.list(m)) {
-      stop("a submitted model must be an object, not ",
+      stop("a submitted model in ", gate_name, " must be an object, not ",
            article_for(class(m)[1]), " ", class(m)[1], ".", call. = FALSE)
     }
     id <- m[["model_id"]]
     if (is.null(id) || length(id) != 1L || !is.character(id)) {
-      stop("a submitted model is missing a valid `model_id`.", call. = FALSE)
+      stop("a submitted model in ", gate_name, " is missing a valid `model_id`.", call. = FALSE)
     }
     id
   }, character(1))
 
-  chosen_id <- sel[["chosen_model_id"]]
+  chosen_id <- gate[[chosen_field]]
   if (is.null(chosen_id)) {
-    stop("descriptor's structural_selection has no chosen_model_id.", call. = FALSE)
+    stop("descriptor's ", gate_name, " has no ", chosen_field, ".", call. = FALSE)
   }
   if (length(chosen_id) != 1L || !is.character(chosen_id)) {
-    stop("descriptor's chosen_model_id must be a single string, not ",
+    stop("descriptor's ", chosen_field, " must be a single string, not ",
          article_for(class(chosen_id)[1]), " ", class(chosen_id)[1], ".", call. = FALSE)
   }
 

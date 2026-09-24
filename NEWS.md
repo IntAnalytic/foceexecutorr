@@ -3,8 +3,8 @@
 Initial scaffold. Nothing here executes a real estimation yet; what exists is the
 contract the rest will be built against.
 
-* `read_descriptor()` reads and validates a signed `model.json` descriptor
-  (schema version 1), the artifact `sentinel-poppk` writes at report sign-off.
+* `read_descriptor()` reads and validates a signed descriptor, the artifact
+  `sentinel-poppk` writes at report sign-off.
 * `chosen_model()` resolves the model a descriptor actually selected, from the
   full submitted tuple it carries.
 * A pluggable backend registry — `register_backend()`, `backends()`,
@@ -38,6 +38,44 @@ contract the rest will be built against.
   the JSON itself carries (not just the first, for a duplicated key) before
   attaching the real source path -- previously an untrusted `.source` field
   could shadow the real one.
+* `read_descriptor()` now accepts schema version 2 as well as 1.
+  `SUPPORTED_SCHEMA_VERSION` is an integer vector of every version this
+  package can read; check membership (`schema_version %in%
+  SUPPORTED_SCHEMA_VERSION`), not equality against a single value -- a
+  scalar would make that check silently reject a valid but non-default
+  version.
+* `chosen_model()` now resolves through `covariate_search` when a run went on
+  to test covariate relationships, not just `structural_selection` -- the
+  bare structural candidate a run started from (e.g. a plain 2-compartment
+  model) is not the model its `sign_off` actually describes as reported and
+  qualified once covariate testing has refined it further. The error from a
+  submitted model missing its `model_id` (or not being an object at all)
+  names which gate it came from, since a descriptor can have two.
+* The built-in `"inspect"` backend reads a submitted model's
+  `declared_covariates` field when its own `covariates` is empty (schema
+  v2's shape for a structural-selection candidate before covariate testing
+  has run), preferring `covariates` whenever it already has content, and
+  reports `absorption`; `print.focex_descriptor()` includes the absorption
+  route too when present. `would_run$covariates` does not have one
+  consistent shape across the two cases -- bare candidate names from the
+  `declared_covariates` fallback, or `param:covariate` relationship strings
+  once `covariate_search` has resolved a model -- a known rough edge in the
+  `"inspect"` backend's human-facing summary, not (yet) a stable
+  machine-readable contract.
+* `read_descriptor()` normalizes jsonlite's `{}` (an empty *named* list --
+  what its JSON writer produces for a round-tripped R `NULL`, distinct from a
+  genuine empty array `[]`) back to `NULL`, recursively, at every depth. This
+  matters for any descriptor that has been read and saved back out with
+  `jsonlite::write_json()` (without `null = "null"`) and read again: every
+  field that was originally `null` -- `covariate_search`,
+  `declared_covariates`, `absorption`, `seed`, or any other optional field --
+  would otherwise come back as an empty list rather than `NULL`, which broke
+  `chosen_model()`/`execute()` outright for a resaved `covariate_search:
+  null` and printed a dangling `, )` for a resaved `absorption: null`.
+* Documentation no longer implies the descriptor sentinel-poppk writes is
+  literally named `model.json` -- it is named after the run (e.g.
+  `model-run-<run-id>.json`). `read_descriptor()` accepted any path all
+  along; only the docs, `DESCRIPTION`, and the README example were wrong.
 * `read_descriptor()`'s schema-version check now compares by numeric value
   rather than exact type, so `1`, `1.0`, and `"1"` are all accepted as schema
   version 1; a JSON boolean or a non-digit string (`"0x1"`, `" 1 "`, `"1e0"`)

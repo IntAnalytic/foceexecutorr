@@ -118,8 +118,7 @@ test_that("a backend cannot promote its own result to official", {
                    official = FALSE, description = "claims to be official")
   on.exit(rm("liar", envir = foceexecutorr:::.registry), add = TRUE)
 
-  res <- execute(system.file("extdata", "model.json", package = "foceexecutorr"),
-                 backend = "liar")
+  res <- execute(fixture(), backend = "liar")
 
   expect_false(res$official)
 })

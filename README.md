@@ -2,10 +2,11 @@
 
 Execute a signed population-PK model descriptor against a pluggable estimation backend.
 
-`sentinel-poppk` emits a `model.json` at report sign-off: a self-contained, signed
-description of the analysis — the full model tuple as submitted, the one that was
-chosen, its fitted parameters, the accepted data-handling, and who signed it. This
-package takes that file and runs the model it specifies.
+`sentinel-poppk` emits a signed descriptor at report sign-off, named after the run
+(e.g. `model-run-<run-id>.json`, not literally `model.json`): a self-contained,
+signed description of the analysis — the full model tuple as submitted, the one
+that was chosen, its fitted parameters, the accepted data-handling, and who
+signed it. This package takes that file and runs the model it specifies.
 
 It owns **execution only**. Assembling data, imputation and BLQ handling, and
 organising outputs belong to the orchestrator, which is a separate package
@@ -23,7 +24,7 @@ given machine.
 ```r
 library(foceexecutorr)
 
-d <- read_descriptor("model.json")
+d <- read_descriptor(system.file("extdata", "model.json", package = "foceexecutorr"))
 d
 #> <focex_descriptor>
 #>   run:      demo-2cmt-wt-age-signed

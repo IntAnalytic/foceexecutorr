@@ -1,22 +1,158 @@
-fixture <- function() system.file("extdata", "model.json", package = "foceexecutorr")
-
 test_that("a real signed descriptor reads", {
   d <- read_descriptor(fixture())
 
   expect_s3_class(d, "focex_descriptor")
-  expect_equal(d$schema_version, SUPPORTED_SCHEMA_VERSION)
+  # The fixture is schema v1 specifically -- SUPPORTED_SCHEMA_VERSION is the
+  # vector of every version this package accepts, not this fixture's own version.
+  expect_equal(d$schema_version, 1)
   expect_true(nzchar(d$run_id))
 })
 
+test_that("a schema v2 descriptor -- named the way sentinel-poppk actually names one -- reads too", {
+  d <- read_descriptor(fixture_v2())
+
+  expect_s3_class(d, "focex_descriptor")
+  expect_equal(d$schema_version, 2)
+  expect_true(nzchar(d$run_id))
+  # The fixture's covariate_search went on to refine structural_selection's
+  # bare "2cmt" pick into "cov-step3" (2cmt + covariate effects) -- that, not
+  # the structural candidate, is what chosen_model() must resolve to.
+  expect_equal(chosen_model(d)$model_id, d$covariate_search$final_model_id)
+  expect_false(chosen_model(d)$model_id == d$structural_selection$chosen_model_id)
+})
+
 test_that("a descriptor from a future schema version is refused, not guessed at", {
-  # The failure this actually prevents: sentinel-poppk adds a provenance header
-  # (schema 2) and this package silently reads it as if nothing changed.
+  # The failure this actually prevents: sentinel-poppk moves on to a schema
+  # version beyond what this package's SUPPORTED_SCHEMA_VERSION lists, and
+  # this package silently reads the descriptor as if nothing changed.
   tmp <- tempfile(fileext = ".json")
   raw <- jsonlite::fromJSON(fixture(), simplifyVector = FALSE)
-  raw$schema_version <- SUPPORTED_SCHEMA_VERSION + 1L
+  raw$schema_version <- max(SUPPORTED_SCHEMA_VERSION) + 1L
   jsonlite::write_json(raw, tmp, auto_unbox = TRUE)
 
   expect_error(read_descriptor(tmp), "schema version")
+  # Pins the message actually naming every supported version, not just one --
+  # a regression back to a scalar-shaped message would still contain "schema
+  # version" and pass the check above while silently dropping "2" from it.
+  expect_error(read_descriptor(tmp), "this package supports 1, 2", fixed = TRUE)
+})
+
+test_that("SUPPORTED_SCHEMA_VERSION is the vector of every version this package accepts", {
+  # A caller must use `%in%`, not `==`: a scalar constant would let a
+  # newer-but-still-supported descriptor fail a naive equality check even
+  # though read_descriptor() itself accepts it fine.
+  expect_true(is.numeric(SUPPORTED_SCHEMA_VERSION))
+  expect_true(all(c(1L, 2L) %in% SUPPORTED_SCHEMA_VERSION))
+})
+
+test_that("chosen_model() prefers covariate_search over structural_selection when both are present", {
+  # Built from the v1 fixture (whose own covariate_search is null) with a
+  # synthetic covariate_search spliced in, so this pins the gate-resolution
+  # PRIORITY directly, rather than relying on what the v2 fixture happens to
+  # contain.
+  d <- read_descriptor(fixture())
+  d$covariate_search <- list(
+    submitted_ladder = list(list(model_id = "cov-final", compartments = 2,
+                                  error_model = "combined", covariates = list("weight:CL"),
+                                  estimation_method = "FOCE-I", seed = 1)),
+    final_model_id = "cov-final"
+  )
+
+  expect_equal(chosen_model(d)$model_id, "cov-final")
+})
+
+test_that("a covariate_search key removed at the R level falls back to structural_selection", {
+  # `d$covariate_search <- NULL` REMOVES the key from the list (R's usual
+  # assignment semantics), so this pins "key absent entirely" -- a genuine
+  # JSON `null` is covered separately below, since jsonlite does not
+  # necessarily represent the two identically once serialised.
+  d <- read_descriptor(fixture())
+  d$covariate_search <- NULL
+
+  expect_equal(chosen_model(d)$model_id, d$structural_selection$chosen_model_id)
+})
+
+test_that("a genuine JSON null covariate_search falls back to structural_selection", {
+  # fixture()'s own file has a literal `"covariate_search": null` -- read it
+  # with no R-level manipulation at all, the actual shape read_descriptor()
+  # hands back for a real, unmodified v1 descriptor.
+  d <- read_descriptor(fixture())
+
+  expect_equal(chosen_model(d)$model_id, d$structural_selection$chosen_model_id)
+})
+
+test_that("a covariate_search that is genuinely malformed errors loudly, not silently ignored", {
+  d <- read_descriptor(fixture())
+  d$covariate_search <- "not an object"
+
+  expect_error(chosen_model(d), "covariate_search must be an object")
+})
+
+test_that("a descriptor round-tripped through jsonlite::write_json() still resolves correctly", {
+  # The concrete, realistic failure the tests above are only approximating:
+  # read a real v1 descriptor, save it back out the ordinary way (no
+  # `null = \"null\"`), read it again -- covariate_search survives as `{}`,
+  # not `null`, and must still resolve via structural_selection, not error.
+  d <- read_descriptor(fixture())
+  tmp <- tempfile(fileext = ".json")
+  jsonlite::write_json(unclass(d), tmp, auto_unbox = TRUE)
+
+  resaved_text <- paste(readLines(tmp, warn = FALSE), collapse = "")
+  expect_true(grepl('"covariate_search":{}', resaved_text, fixed = TRUE))
+
+  resaved <- read_descriptor(tmp)
+  expect_equal(chosen_model(resaved)$model_id, d$structural_selection$chosen_model_id)
+  # Not expect_no_error(): that needs testthat >= 3.1.5, newer than this
+  # package's own `Suggests: testthat (>= 3.0.0)` floor. An uncaught error
+  # inside a test_that() block already fails the test on its own.
+  execute(resaved)
+  expect_true(any(grepl("model:", capture.output(print(resaved)))))
+})
+
+test_that("print() shows the covariate-refined model, not the bare structural one, for a v2 descriptor", {
+  d <- read_descriptor(fixture_v2())
+
+  out <- capture.output(print(d))
+
+  expect_true(any(grepl("model:.*cov-step3", out)))
+  expect_false(any(grepl("model:.*\\b2cmt\\b", out)))
+})
+
+test_that("print() has no dangling ', )' when absorption is absent", {
+  # A NULL absorption (v1 has no such field at all) must produce
+  # "...combined error)", not "...combined error, )" -- the latter is what
+  # an unnormalized empty-list absorption would print as.
+  d <- read_descriptor(fixture())
+
+  out <- capture.output(print(d))
+
+  expect_true(any(grepl("combined error)", out, fixed = TRUE)))
+  expect_false(any(grepl(", )", out, fixed = TRUE)))
+})
+
+test_that("read_descriptor() normalizes jsonlite's {} shape for a round-tripped null, at any depth", {
+  # General coverage for normalize_empty_objects(), independent of any one
+  # field chosen_model()/the inspect backend happen to read today: a NULL
+  # set explicitly (not via `$<-`, which would remove the key) at the
+  # top level, and nested two levels deep inside a submitted model, both
+  # come back as jsonlite's `{}` shape after an ordinary write_json() round
+  # trip and must both normalize back to real NULL, not an empty list.
+  d <- read_descriptor(fixture())
+  d["parent_run_id"] <- list(NULL)
+  d$structural_selection$submitted_models[[1]]["force_outcome"] <- list(NULL)
+  tmp <- tempfile(fileext = ".json")
+  jsonlite::write_json(unclass(d), tmp, auto_unbox = TRUE)
+
+  resaved <- read_descriptor(tmp)
+
+  expect_null(resaved[["parent_run_id"]])
+  expect_false(is.list(resaved[["parent_run_id"]]))
+  expect_null(resaved$structural_selection$submitted_models[[1]][["force_outcome"]])
+  expect_false(is.list(resaved$structural_selection$submitted_models[[1]][["force_outcome"]]))
+  # A genuine empty ARRAY must NOT be normalized away -- only jsonlite's
+  # empty-NAMED-list shape for a round-tripped null is.
+  expect_true(is.list(resaved$data_handling$imputations))
+  expect_length(resaved$data_handling$imputations, 0L)
 })
 
 test_that("something that is not a descriptor is refused by name", {
@@ -158,6 +294,26 @@ test_that("a schema_version serialised as a double or a string is still accepted
   raw$schema_version <- "1"
   jsonlite::write_json(raw, as_string, auto_unbox = TRUE)
   expect_equal(read_descriptor(as_string)$schema_version, "1")
+})
+
+test_that("a schema_version of 2 serialised as a double or a string is also accepted", {
+  # The v1-based test above exercises this same type-coercion logic but only
+  # ever substitutes in place of "1" -- is_supported_schema_version() checks
+  # membership in SUPPORTED_SCHEMA_VERSION generically, but pin the "2"
+  # representations too rather than trusting that by inference alone.
+  as_double <- tempfile(fileext = ".json")
+  writeLines(sub('"schema_version": 2,', '"schema_version": 2.0,',
+                 readLines(fixture_v2(), warn = FALSE), fixed = TRUE),
+             as_double)
+  double_version <- read_descriptor(as_double)$schema_version
+  expect_type(double_version, "double")
+  expect_equal(double_version, 2)
+
+  as_string <- tempfile(fileext = ".json")
+  raw <- jsonlite::fromJSON(fixture_v2(), simplifyVector = FALSE)
+  raw$schema_version <- "2"
+  jsonlite::write_json(raw, as_string, auto_unbox = TRUE)
+  expect_equal(read_descriptor(as_string)$schema_version, "2")
 })
 
 test_that("a null schema_version is refused as a missing field", {

@@ -7,7 +7,8 @@
 execute(descriptor, backend = "inspect", data_path = NULL, ...)
 }
 \arguments{
-\item{descriptor}{A \code{focex_descriptor}, or a path to a \code{model.json}.}
+\item{descriptor}{A \code{focex_descriptor}, or a path to a descriptor file
+(e.g. \verb{model-run-<run-id>.json}).}
 
 \item{backend}{Name of a registered backend. Defaults to \code{"inspect"}, which
 runs nothing -- a default that cannot be mistaken for a result.}
@@ -42,4 +43,9 @@ function, from the backend's own registration -- never supplied by the caller.
 d <- system.file("extdata", "model.json", package = "foceexecutorr")
 res <- execute(d)
 res$official
+
+# schema version 2 executes the same way
+d2 <- system.file("extdata", "model-run-fbd67a28-06a8-40b4-9cb1-e14e6cc49ff3.json",
+                   package = "foceexecutorr")
+execute(d2)$result$would_run$covariates
 }

@@ -10,7 +10,8 @@
 #' that says which one you are looking at. The label is attached here, by this
 #' function, from the backend's own registration -- never supplied by the caller.
 #'
-#' @param descriptor A `focex_descriptor`, or a path to a `model.json`.
+#' @param descriptor A `focex_descriptor`, or a path to a descriptor file
+#'   (e.g. `model-run-<run-id>.json`).
 #' @param backend Name of a registered backend. Defaults to `"inspect"`, which
 #'   runs nothing -- a default that cannot be mistaken for a result.
 #' @param data_path Optional path to the analysis-ready dataset. The descriptor
@@ -27,6 +28,11 @@
 #' d <- system.file("extdata", "model.json", package = "foceexecutorr")
 #' res <- execute(d)
 #' res$official
+#'
+#' # schema version 2 executes the same way
+#' d2 <- system.file("extdata", "model-run-fbd67a28-06a8-40b4-9cb1-e14e6cc49ff3.json",
+#'                    package = "foceexecutorr")
+#' execute(d2)$result$would_run$covariates
 #' @export
 execute <- function(descriptor, backend = "inspect", data_path = NULL, ...) {
   reserved <- intersect(names(list(...)), c("descriptor", "model", "data_path"))
@@ -49,7 +55,7 @@ execute <- function(descriptor, backend = "inspect", data_path = NULL, ...) {
   }
   if (!inherits(descriptor, "focex_descriptor")) {
     stop("`descriptor` must be a `focex_descriptor` (from read_descriptor()) or a path ",
-         "to a model.json, not ", article_for(class(descriptor)[1]), " ", class(descriptor)[1],
+         "to a descriptor file, not ", article_for(class(descriptor)[1]), " ", class(descriptor)[1],
          ".", call. = FALSE)
   }
   if (!is_nonempty_name(backend)) {

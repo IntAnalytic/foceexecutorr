@@ -18,10 +18,11 @@ library(foceexecutorr)
 ## What this package is for
 
 A population-PK analysis run in `sentinel-poppk` ends with a human signing a
-report. At that moment the application writes `model.json`: a signed, durable
-description of what was decided — every candidate model as submitted, which one
-was chosen and why, the fitted parameters, the accepted data-handling, and the
-attestation itself.
+report. At that moment the application writes a descriptor -- named after the
+run (e.g. `model-run-<run-id>.json`), not literally `model.json` -- a signed,
+durable description of what was decided — every candidate model as submitted,
+which one was chosen and why, the fitted parameters, the accepted
+data-handling, and the attestation itself.
 
 That file is the handover. This package reads it and runs the model it names.
 
@@ -79,6 +80,41 @@ support a submission are different things, and the difference is invisible at th
 point where it matters most. So the executor attaches the label, from a flag the
 backend had to state when it registered, and the default for anything unstated is
 "not official".
+
+## A schema v2 descriptor
+
+sentinel-poppk has since added a second schema version: a `provenance` block
+recording what built the report, and a new `declared_covariates` field on a
+`structural_selection` submitted model (`covariates` there is now always
+empty -- real covariate relationships only exist once the covariate_search
+step has run; `declared_covariates` carries the candidates instead). Real
+files are also not literally named `model.json`; sentinel-poppk names one
+after its run, e.g. `model-run-<run-id>.json`.
+
+```{r}
+path2 <- system.file("extdata", "model-run-fbd67a28-06a8-40b4-9cb1-e14e6cc49ff3.json",
+                      package = "foceexecutorr")
+d2 <- read_descriptor(path2)
+d2$schema_version
+
+execute(d2)$result$would_run$covariates
+```
+
+`SUPPORTED_SCHEMA_VERSION` is the vector of every schema version this package
+can read, so both `d` and `d2` above are valid, executable descriptors:
+
+```{r}
+SUPPORTED_SCHEMA_VERSION
+```
+
+`d2`'s `covariate_search` went on to refine its structural pick ("2cmt") into
+a covariate-refined model ("cov-step3"). `chosen_model()` reports that refined
+model, not the bare structural candidate:
+
+```{r}
+chosen_model(d2)$model_id
+d2$structural_selection$chosen_model_id  # the bare candidate it was refined from
+```
 
 ## Registering a real backend
 

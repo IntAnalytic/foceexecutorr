@@ -7,16 +7,17 @@
 read_descriptor(path)
 }
 \arguments{
-\item{path}{Path to a \code{model.json} file.}
+\item{path}{Path to a descriptor file, e.g. \verb{model-run-<run-id>.json}.}
 }
 \value{
 An object of class \code{focex_descriptor}: the parsed descriptor with its
 source path attached.
 }
 \description{
-Reads the \code{model.json} that the sentinel-poppk workflow writes to a run's
-workspace at report sign-off, and checks that it is one this package knows how
-to execute.
+Reads the descriptor that the sentinel-poppk workflow writes to a run's
+workspace at report sign-off -- named after the run (e.g.
+\verb{model-run-<run-id>.json}), not literally \code{model.json} -- and checks that it
+is one this package knows how to execute.
 }
 \details{
 The descriptor is deliberately the \emph{only} input. It is self-contained by
@@ -34,6 +35,11 @@ descriptor from a schema version this package predates.
 path <- system.file("extdata", "model.json", package = "foceexecutorr")
 d <- read_descriptor(path)
 d$run_id
+
+# schema version 2, named the way sentinel-poppk actually names a descriptor
+path2 <- system.file("extdata", "model-run-fbd67a28-06a8-40b4-9cb1-e14e6cc49ff3.json",
+                      package = "foceexecutorr")
+read_descriptor(path2)$schema_version
 }
 \seealso{
 \code{\link[=chosen_model]{chosen_model()}} to resolve which model it selected, \code{\link[=execute]{execute()}} to run it.

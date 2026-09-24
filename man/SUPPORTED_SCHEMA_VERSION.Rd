@@ -2,9 +2,11 @@
 % Please edit documentation in R/descriptor.R
 \name{SUPPORTED_SCHEMA_VERSION}
 \alias{SUPPORTED_SCHEMA_VERSION}
-\title{The descriptor schema version this package executes}
+\title{The descriptor schema versions this package can read}
 \format{
-An integer scalar.
+An integer vector, ascending, of every schema version this package
+accepts -- not just the newest one. A schema v1 descriptor signed before
+sentinel-poppk added v2 is still a valid, executable record.
 }
 \usage{
 SUPPORTED_SCHEMA_VERSION
@@ -14,4 +16,11 @@ Exported deliberately. An embedder that wants to check compatibility before
 handing over a descriptor should be able to ask, rather than parse an error
 message -- a lesson taken from integrating against a library that offered no
 such constant.
+}
+\details{
+This is an integer vector, not a scalar: \code{schema_version \%in\% SUPPORTED_SCHEMA_VERSION} is the correct check, not equality against a
+single value. Equality would quietly reject a valid, newer descriptor
+instead of accepting it -- e.g. \code{schema_version == SUPPORTED_SCHEMA_VERSION}
+is \code{FALSE} for a schema v2 descriptor even though \code{read_descriptor()}
+accepts it fine.
 }
