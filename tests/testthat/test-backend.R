@@ -5,6 +5,33 @@ test_that("the built-in inspect backend is registered and is not official", {
   expect_false(reg$official[reg$name == "inspect"])
 })
 
+test_that("the inspect backend's run() does not require a classed focex_descriptor", {
+  # A backend's own contract only promises `descriptor[["covariate_search"]]`
+  # is reachable, not that `descriptor` carries this package's S3 class --
+  # execute() always supplies a real one, but resolve_backend() is exported,
+  # so a caller invoking run() directly (bypassing execute()) with an
+  # unclassed descriptor (e.g. unclass(d)) must not fail depending on
+  # unrelated data. Previously this worked when the model's own `covariates`
+  # was non-empty (v1's structural entries, or a covariate_search-resolved
+  # model) but errored the moment `covariates` was empty (a v2
+  # structural_selection candidate before covariate testing), since only that
+  # branch called resolved_gate() -- which required a classed descriptor at
+  # the time. resolved_gate() now accepts any list, closing this for good.
+  run <- resolve_backend("inspect")$run
+
+  d1 <- read_descriptor(fixture())
+  m1 <- chosen_model(d1)
+  # Not expect_no_error(): needs testthat >= 3.1.5, newer than this
+  # package's own floor. An uncaught error already fails the test.
+  run(descriptor = unclass(d1), model = m1, data_path = NULL)
+
+  d2 <- read_descriptor(fixture_v2())
+  d2$covariate_search <- NULL
+  empty_covariates_model <- d2$structural_selection$submitted_models[[1]]
+  out <- run(descriptor = unclass(d2), model = empty_covariates_model, data_path = NULL)
+  expect_equal(sort(out$would_run$covariates), c("age", "sex", "weight"))
+})
+
 test_that("registering requires an explicit official flag of the right shape", {
   expect_error(register_backend("bad", function(...) NULL, official = NA), "official")
   expect_error(register_backend("bad", "not a function"), "function")

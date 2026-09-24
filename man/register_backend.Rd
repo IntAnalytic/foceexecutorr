@@ -17,13 +17,27 @@ register_backend(
 
 \item{run}{A function of \verb{(descriptor, model, data_path, ...)} returning a list.
 It is called with the resolved descriptor and the model \code{\link[=chosen_model]{chosen_model()}}
-picked, so a backend never re-implements descriptor parsing. Integer
+picked FROM THAT SAME descriptor, so a backend never re-implements
+descriptor parsing -- but also never re-derives which one \code{model} came
+from. \code{\link[=execute]{execute()}} always calls \code{run()} with a matched pair; calling a
+backend's \code{run()} directly (e.g. via \code{\link[=resolve_backend]{resolve_backend()}}) with a \code{model}
+from a \emph{different} descriptor than the \code{descriptor} argument is the
+caller's own mismatch to avoid -- \code{descriptor[["dataset_path"]]} would
+already be wrong for that \code{model} on this basis alone, the same as
+\link[=resolved_gate]{resolved_gate(descriptor)} would be. Integer
 fields on \code{model} (e.g. \code{seed}) are ordinarily numeric, but arrive as a
 character string instead if the descriptor's value exceeds 2^53 -- an R
 double can't represent an integer beyond that exactly, so
 \code{\link[=read_descriptor]{read_descriptor()}} preserves the digits as a string rather than
 silently rounding it. Check \code{is.character()} before doing arithmetic on
-such a field if that's a realistic possibility for your backend.}
+such a field if that's a realistic possibility for your backend. \code{model}
+is exactly the entry \code{\link[=chosen_model]{chosen_model()}} found in the descriptor's own
+submitted tuple -- nothing added, nothing removed -- so it is safe to
+compare, hash, or forward to an external engine unchanged. Whether an
+empty \code{covariates} on \code{model} means "not decided yet" or "confirmed to
+have none" depends on which gate it came from -- call
+\link[=resolved_gate]{resolved_gate(descriptor)} rather than re-implementing
+that check.}
 
 \item{official}{\code{TRUE} only if results from this backend may be treated as an
 official, reportable answer. \strong{Defaults to \code{FALSE}, and that default is the

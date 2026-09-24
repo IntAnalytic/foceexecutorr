@@ -87,10 +87,7 @@ test_that("would_run$covariates still reports the real relationships after a jso
   # discarding the real, still-intact weight:CL/weight:V1/age:CL relationships
   # sitting right there in `covariates`.
   d <- read_descriptor(fixture_v2())
-  tmp <- tempfile(fileext = ".json")
-  jsonlite::write_json(unclass(d), tmp, auto_unbox = TRUE)
-
-  resaved <- read_descriptor(tmp)
+  resaved <- round_trip(d)
   res <- execute(resaved)
 
   expect_equal(res$model_id, "cov-step3")
@@ -123,10 +120,7 @@ test_that("would_run$absorption stays NULL, not an empty list, after a jsonlite 
   # be a `list()`, not NULL.
   d <- read_descriptor(fixture())
   d$structural_selection$submitted_models[[2]]["absorption"] <- list(NULL)
-  tmp <- tempfile(fileext = ".json")
-  jsonlite::write_json(unclass(d), tmp, auto_unbox = TRUE)
-
-  resaved <- read_descriptor(tmp)
+  resaved <- round_trip(d)
   res <- execute(resaved)
 
   expect_null(res$result$would_run$absorption)
@@ -163,6 +157,24 @@ test_that("would_run$covariates does not drop covariates assigned as a plain cha
   res <- execute(d)
 
   expect_equal(res$result$would_run$covariates, c("weight", "age"))
+})
+
+test_that("would_run$covariates does not fall back to declared candidates for a covariate_search-confirmed empty model", {
+  # cov-step0 in the real fixture ("Base (no covariates)") is exactly this
+  # case: covariate_search ran and confirmed no covariate effects, so its
+  # `covariates` is genuinely, deliberately empty -- not "not decided yet".
+  # Falling back to declared_covariates there would misreport untested
+  # candidates as if the base model had kept them. Neither real fixture
+  # actually has a non-null declared_covariates on a covariate_search ladder
+  # entry to exercise this with, so it's constructed directly.
+  d <- read_descriptor(fixture_v2())
+  d$covariate_search$final_model_id <- "cov-step0"
+  d$covariate_search$submitted_ladder[[1]]$declared_covariates <- list("age", "weight", "sex")
+
+  res <- execute(d)
+
+  expect_equal(res$model_id, "cov-step0")
+  expect_equal(res$result$would_run$covariates, character())
 })
 
 test_that("would_run$covariates falls back to the declared candidates when covariate_search hasn't run", {

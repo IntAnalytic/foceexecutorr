@@ -48,20 +48,55 @@ contract the rest will be built against.
   to test covariate relationships, not just `structural_selection` -- the
   bare structural candidate a run started from (e.g. a plain 2-compartment
   model) is not the model its `sign_off` actually describes as reported and
-  qualified once covariate testing has refined it further. The error from a
-  submitted model missing its `model_id` (or not being an object at all)
-  names which gate it came from, since a descriptor can have two.
+  qualified once covariate testing has refined it further. A
+  `covariate_search` that is present but incomplete (a submitted ladder with
+  no `final_model_id` recorded, say) is a genuinely inconsistent signed
+  record -- `sign_off` cannot meaningfully describe a "final model" that gate
+  never named -- so this errors rather than silently falling back to
+  `structural_selection` and reporting a materially different, less-refined
+  model in its place. Every error from `chosen_model()` -- a chosen id that's
+  duplicated, not found, or not a plain string; a submitted model missing or
+  malformed `model_id` -- now names which gate it came from, since a
+  descriptor can have two. `chosen_model()`'s return value is unchanged from
+  the signed record's own submitted entry -- safe to compare, hash, or
+  forward to a real backend as-is. A new exported `resolved_gate(descriptor)`
+  answers which gate `chosen_model()` would resolve (`"structural_selection"`
+  or `"covariate_search"`), for a custom backend that needs to know whether
+  an empty `covariates` on the model it was handed means "not decided yet" or
+  "confirmed to have none" -- see [register_backend()]. It accepts any list
+  shaped like a descriptor, not only a classed `focex_descriptor`, since a
+  backend called directly (bypassing `execute()`) may be handed an unclassed
+  one.
 * The built-in `"inspect"` backend reads a submitted model's
-  `declared_covariates` field when its own `covariates` is empty (schema
-  v2's shape for a structural-selection candidate before covariate testing
-  has run), preferring `covariates` whenever it already has content, and
-  reports `absorption`; `print.focex_descriptor()` includes the absorption
-  route too when present. `would_run$covariates` does not have one
-  consistent shape across the two cases -- bare candidate names from the
-  `declared_covariates` fallback, or `param:covariate` relationship strings
-  once `covariate_search` has resolved a model -- a known rough edge in the
-  `"inspect"` backend's human-facing summary, not (yet) a stable
-  machine-readable contract.
+  `declared_covariates` field when its own `covariates` is empty AND the
+  descriptor's `covariate_search` is `NULL` (the same check `chosen_model()`
+  itself uses) -- there, an empty `covariates` means "not decided yet"
+  (schema v2's shape before covariate testing has run). A
+  `covariate_search`-resolved model's empty `covariates` means "confirmed to
+  have none" instead (e.g. the base, no-covariates step of a ladder), and is
+  never subject to the fallback, so it can't be misreported as carrying
+  untested candidates. The backend also reports `absorption`;
+  `print.focex_descriptor()` includes the absorption route too when present,
+  and now reports when a model could not be resolved at all instead of
+  silently omitting the line. `would_run$covariates` does not have one
+  consistent shape across the fallback and non-fallback cases -- bare
+  candidate names (e.g. "age") vs. `param:covariate` relationship strings
+  (e.g. "age:CL") -- a known rough edge in the `"inspect"` backend's
+  human-facing summary, not (yet) a stable machine-readable contract.
+* `jsonlite::write_json()`'s default `digits` (4 *decimal places*, not
+  significant figures) silently truncates a floating-point estimate --
+  4.057944 comes back as 4.0579, and a small value like 0.000012345 comes
+  back as `0` outright, not just rounded. This is not something
+  `read_descriptor()` can fix after the fact (it only reads), but it matters
+  here specifically because this package cares about exact fidelity to a
+  signed numeric record (see the `bigint_as_char` handling below); anyone
+  re-serialising a descriptor with `jsonlite::write_json()` -- to cache, log,
+  or forward it -- needs `digits = NA` (jsonlite's high-precision mode, ~15
+  significant digits -- ample for a fitted PK estimate, though not a
+  bit-for-bit guarantee for an arbitrary double) to avoid silently
+  corrupting it. The package's own tests that round-trip a descriptor now do
+  this via a shared `round_trip()` test
+  helper, not ad hoc, so a lossy default can't creep back in unnoticed.
 * `read_descriptor()` normalizes jsonlite's `{}` (an empty *named* list --
   what its JSON writer produces for a round-tripped R `NULL`, distinct from a
   genuine empty array `[]`) back to `NULL`, recursively, at every depth. This

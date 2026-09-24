@@ -61,6 +61,43 @@ test_that("chosen_model() prefers covariate_search over structural_selection whe
   expect_equal(chosen_model(d)$model_id, "cov-final")
 })
 
+test_that("chosen_model() returns the structural_selection entry completely unmodified", {
+  # Documented (register_backend()) as safe to compare, hash, or forward to
+  # an external engine unchanged -- pinned directly, not just inferred from
+  # tests that only check individual fields, so a field ever being added
+  # back (accidentally or otherwise) would be caught here.
+  d <- read_descriptor(fixture())
+
+  expect_identical(chosen_model(d), d$structural_selection$submitted_models[[2]])
+})
+
+test_that("chosen_model() returns the covariate_search entry completely unmodified", {
+  d <- read_descriptor(fixture_v2())
+  ids <- vapply(d$covariate_search$submitted_ladder, function(m) m$model_id, character(1))
+  idx <- which(ids == d$covariate_search$final_model_id)
+
+  expect_identical(chosen_model(d), d$covariate_search$submitted_ladder[[idx]])
+})
+
+test_that("resolved_gate() answers the same question chosen_model() uses internally", {
+  expect_equal(resolved_gate(read_descriptor(fixture())), "structural_selection")
+  expect_equal(resolved_gate(read_descriptor(fixture_v2())), "covariate_search")
+})
+
+test_that("resolved_gate() accepts an unclassed list, not just a focex_descriptor", {
+  # Deliberately permissive: a backend called directly (bypassing execute())
+  # may be handed an unclassed descriptor (see register_backend()'s docs),
+  # and resolved_gate() is the function they're told to call for this.
+  expect_equal(resolved_gate(unclass(read_descriptor(fixture()))), "structural_selection")
+  expect_equal(resolved_gate(unclass(read_descriptor(fixture_v2()))), "covariate_search")
+  expect_equal(resolved_gate(list()), "structural_selection")
+})
+
+test_that("resolved_gate() rejects a non-list with a clear message", {
+  expect_error(resolved_gate(5), "must be a", fixed = TRUE)
+  expect_error(resolved_gate("not a descriptor"), "must be a", fixed = TRUE)
+})
+
 test_that("a covariate_search key removed at the R level falls back to structural_selection", {
   # `d$covariate_search <- NULL` REMOVES the key from the list (R's usual
   # assignment semantics), so this pins "key absent entirely" -- a genuine
@@ -88,6 +125,33 @@ test_that("a covariate_search that is genuinely malformed errors loudly, not sil
   expect_error(chosen_model(d), "covariate_search must be an object")
 })
 
+test_that("a covariate_search present but missing final_model_id errors, does not silently fall back", {
+  # A covariate_search with a real submitted_ladder but no decision recorded
+  # is not "this gate didn't run" (that's NULL, handled above) -- it is an
+  # inconsistent signed record: sign_off cannot meaningfully describe a
+  # "final model" that covariate_search never named. Falling back to
+  # structural_selection here would silently substitute a materially
+  # different, less-refined model for the one such a record claims to
+  # report.
+  d <- read_descriptor(fixture())
+  d$covariate_search <- list(
+    submitted_ladder = list(list(model_id = "cov-step0", compartments = 2,
+                                  error_model = "combined", covariates = list(),
+                                  estimation_method = "FOCE-I", seed = 1))
+  )
+
+  expect_error(chosen_model(d), "covariate_search has no final_model_id")
+})
+
+test_that("print() reports an unresolvable model instead of silently omitting the line", {
+  d <- read_descriptor(fixture())
+  d$covariate_search <- list(submitted_ladder = list(list(model_id = "x")))
+
+  out <- capture.output(print(d))
+
+  expect_true(any(grepl("model:.*could not be resolved", out)))
+})
+
 test_that("a descriptor round-tripped through jsonlite::write_json() still resolves correctly", {
   # The concrete, realistic failure the tests above are only approximating:
   # read a real v1 descriptor, save it back out the ordinary way (no
@@ -95,7 +159,7 @@ test_that("a descriptor round-tripped through jsonlite::write_json() still resol
   # not `null`, and must still resolve via structural_selection, not error.
   d <- read_descriptor(fixture())
   tmp <- tempfile(fileext = ".json")
-  jsonlite::write_json(unclass(d), tmp, auto_unbox = TRUE)
+  jsonlite::write_json(unclass(d), tmp, auto_unbox = TRUE, digits = NA)
 
   resaved_text <- paste(readLines(tmp, warn = FALSE), collapse = "")
   expect_true(grepl('"covariate_search":{}', resaved_text, fixed = TRUE))
@@ -140,10 +204,7 @@ test_that("read_descriptor() normalizes jsonlite's {} shape for a round-tripped 
   d <- read_descriptor(fixture())
   d["parent_run_id"] <- list(NULL)
   d$structural_selection$submitted_models[[1]]["force_outcome"] <- list(NULL)
-  tmp <- tempfile(fileext = ".json")
-  jsonlite::write_json(unclass(d), tmp, auto_unbox = TRUE)
-
-  resaved <- read_descriptor(tmp)
+  resaved <- round_trip(d)
 
   expect_null(resaved[["parent_run_id"]])
   expect_false(is.list(resaved[["parent_run_id"]]))
@@ -153,6 +214,38 @@ test_that("read_descriptor() normalizes jsonlite's {} shape for a round-tripped 
   # empty-NAMED-list shape for a round-tripped null is.
   expect_true(is.list(resaved$data_handling$imputations))
   expect_length(resaved$data_handling$imputations, 0L)
+})
+
+test_that("round_trip() preserves the real fixture's own signed estimate", {
+  # jsonlite::write_json()'s default `digits` would silently corrupt this --
+  # 4.057944 comes back as 4.0579 -- which every other round-trip test in
+  # this file relies on round_trip() NOT doing. Pinned directly here, once,
+  # rather than trusted implicitly.
+  d <- read_descriptor(fixture_v2())
+  resaved <- round_trip(d)
+
+  expect_identical(resaved$parameters[[1]]$estimate, d$parameters[[1]]$estimate)
+  expect_identical(resaved$parameters[[1]]$estimate, 4.057944)
+})
+
+test_that("round_trip() survives a value a subtly-too-low digits setting would not", {
+  # 4.057944 above happens to need exactly 6 decimal places, so it would
+  # round-trip unchanged even under a regression to digits = 6 (jsonlite's
+  # decimal-place mode) -- it can't by itself catch that kind of
+  # subtly-too-low setting. This value needs 11 significant digits and is
+  # small enough that jsonlite's decimal-place truncation would zero it out
+  # entirely at low digits, not just round it.
+  #
+  # expect_identical(), not expect_equal(): expect_equal()'s default
+  # tolerance (~1.5e-8 relative) is loose enough that a regression to
+  # `digits = I(8)` -- jsonlite's SIGNIFICANT-FIGURE mode, keeping 8 of this
+  # value's 11 significant digits -- would still pass. Confirmed empirically;
+  # expect_identical() catches it, expect_equal() does not.
+  d <- read_descriptor(fixture_v2())
+  d$parameters[[1]]$estimate <- 0.000012345678901
+  resaved <- round_trip(d)
+
+  expect_identical(resaved$parameters[[1]]$estimate, 0.000012345678901)
 })
 
 test_that("something that is not a descriptor is refused by name", {

@@ -177,11 +177,27 @@ print.focex_descriptor <- function(x, ...) {
   cat("<focex_descriptor>\n")
   cat("  run:      ", x$run_id, "\n", sep = "")
   cat("  dataset:  ", x$dataset_path, "\n", sep = "")
-  chosen <- tryCatch(chosen_model(x), error = function(e) NULL)
-  if (!is.null(chosen)) {
-    absorption <- if (is.null(chosen[["absorption"]])) "" else paste0(", ", chosen[["absorption"]])
-    cat("  model:    ", chosen$model_id, " (", chosen$compartments, "-compartment, ",
-        chosen$error_model, " error", absorption, ")\n", sep = "")
+  # tryCatch() captures the condition itself, not just NULL, so a malformed
+  # descriptor (e.g. a covariate_search present but missing final_model_id --
+  # an inherently inconsistent signed record, since sign_off can't
+  # meaningfully describe a "final model" covariate_search never named) says
+  # so rather than silently printing as if it had no model information at
+  # all.
+  chosen <- tryCatch(chosen_model(x), error = function(e) e)
+  if (inherits(chosen, "error")) {
+    cat("  model:    <could not be resolved: ", conditionMessage(chosen), ">\n", sep = "")
+  } else {
+    # `[[`, not `$`: same partial-match hazard as `sign_off` below -- a
+    # model missing e.g. `model_id` but carrying a similarly-named field
+    # would otherwise have that field's value printed in its place.
+    # `length(...) == 0L`, not `is.null(...)`, for `absorption`: a v1
+    # descriptor has no such field at all (genuinely absent, length 0), but
+    # so does a v2 one where it was assigned an empty vector rather than
+    # NULL -- either way there is nothing to print, and `is.null()` alone
+    # would miss the second case and print a dangling ", )".
+    absorption <- if (length(chosen[["absorption"]]) == 0L) "" else paste0(", ", chosen[["absorption"]])
+    cat("  model:    ", chosen[["model_id"]], " (", chosen[["compartments"]], "-compartment, ",
+        chosen[["error_model"]], " error", absorption, ")\n", sep = "")
   }
   # `[[`, not `$`: with `sign_off` absent but a similarly-named field (e.g.
   # a draft `sign_off_draft`) present, `$` would partial-match onto it and
@@ -223,31 +239,70 @@ chosen_model <- function(descriptor) {
     stop("`descriptor` must be a `focex_descriptor` from read_descriptor(), not ",
          article_for(class(descriptor)[1]), " ", class(descriptor)[1], ".", call. = FALSE)
   }
+  if (resolved_gate(descriptor) == "covariate_search") {
+    return(resolve_chosen_entry(descriptor[["covariate_search"]], "covariate_search",
+                                 "submitted_ladder", "final_model_id"))
+  }
+  resolve_chosen_entry(descriptor[["structural_selection"]], "structural_selection",
+                       "submitted_models", "chosen_model_id")
+}
+
+#' Which selection gate chosen_model() would resolve
+#'
+#' `chosen_model()` decides internally which gate to resolve
+#' (`structural_selection` or `covariate_search`) using exactly this
+#' question. Exported so a caller -- a custom backend deciding whether an
+#' empty `covariates` field on the model it was handed means "not decided
+#' yet" or "confirmed to have none" (see [register_backend()]) -- can ask the
+#' same question rather than re-implementing it, and can't fall out of sync
+#' with it if this package's own logic ever changes.
+#'
+#' @param descriptor A `focex_descriptor` from [read_descriptor()], or any
+#'   list with the same shape (e.g. `unclass()`ed) -- accepted deliberately: a
+#'   backend's own contract (see [register_backend()]) only promises
+#'   `descriptor[["covariate_search"]]` is reachable, not that `descriptor`
+#'   carries this package's S3 class, and a backend called directly (bypassing
+#'   [execute()], e.g. via [resolve_backend()]) may be handed exactly that.
+#'   Requiring the class here would make a backend that follows this
+#'   function's own advice fail or not depending on unrelated data.
+#' @return `"covariate_search"` if that gate is present (not `NULL`),
+#'   otherwise `"structural_selection"`.
+#' @examples
+#' d <- read_descriptor(system.file("extdata", "model.json", package = "foceexecutorr"))
+#' resolved_gate(d)
+#' @export
+resolved_gate <- function(descriptor) {
+  if (!is.list(descriptor)) {
+    stop("`descriptor` must be a list (a `focex_descriptor` from ",
+         "read_descriptor(), or the same shape), not ",
+         article_for(class(descriptor)[1]), " ", class(descriptor)[1], ".", call. = FALSE)
+  }
   # `[[`, not `$`: a `covariate_search` that is `null` -- the convention
   # read_descriptor() already uses for "this doesn't apply" -- means the gate
-  # never ran, same as the key being absent entirely. A plain `is.null()`
-  # check is enough: read_descriptor() already normalizes the empty-object
-  # shape jsonlite's own JSON writer produces for a round-tripped NULL back
-  # to a real NULL before this ever runs (see normalize_empty_objects()). A
-  # covariate_search that is present but genuinely malformed (some other,
-  # non-empty, non-object value) still fails loudly in resolve_gate() below.
-  cov <- descriptor[["covariate_search"]]
-  if (!is.null(cov)) {
-    return(resolve_gate(cov, "covariate_search", "submitted_ladder", "final_model_id"))
-  }
-  resolve_gate(descriptor[["structural_selection"]], "structural_selection",
-               "submitted_models", "chosen_model_id")
+  # never ran, same as the key being absent entirely. `is.null()` is enough:
+  # read_descriptor() already normalizes the empty-object shape jsonlite's
+  # own JSON writer produces for a round-tripped NULL back to a real NULL
+  # before this ever runs (see normalize_empty_objects()). A covariate_search
+  # that is present but genuinely malformed (some other, non-empty,
+  # non-object value) is not this function's concern -- it still fails
+  # loudly in resolve_chosen_entry() when chosen_model() actually tries to
+  # use it.
+  if (is.null(descriptor[["covariate_search"]])) "structural_selection" else "covariate_search"
 }
 
 # Shared by chosen_model()'s two gates -- structural_selection and
 # covariate_search have the same shape (a submitted list plus the id of the
-# one chosen from it), just under different field names.
+# one chosen from it), just under different field names. Named distinctly
+# from the exported resolved_gate() -- despite both being about "which gate"
+# -- on purpose: the two take different arguments and return different
+# things (a model list here, a gate name there), and a name one letter apart
+# invited exactly the mix-up that distinctness avoids.
 #
 # `[[` throughout, not `$`: partial name matching on a field like
 # `chosen_model_id` would let a similarly-named field (e.g. a
 # `chosen_model_id_prev` left by an older pipeline version) resolve silently
 # instead of the one the descriptor actually names.
-resolve_gate <- function(gate, gate_name, submitted_field, chosen_field) {
+resolve_chosen_entry <- function(gate, gate_name, submitted_field, chosen_field) {
   if (!is.list(gate)) {
     stop("descriptor's ", gate_name, " must be an object, not ",
          article_for(class(gate)[1]), " ", class(gate)[1], ".", call. = FALSE)
@@ -274,18 +329,18 @@ resolve_gate <- function(gate, gate_name, submitted_field, chosen_field) {
     stop("descriptor's ", gate_name, " has no ", chosen_field, ".", call. = FALSE)
   }
   if (length(chosen_id) != 1L || !is.character(chosen_id)) {
-    stop("descriptor's ", chosen_field, " must be a single string, not ",
+    stop("descriptor's ", gate_name, " ", chosen_field, " must be a single string, not ",
          article_for(class(chosen_id)[1]), " ", class(chosen_id)[1], ".", call. = FALSE)
   }
 
   hit <- which(ids == chosen_id)
   if (length(hit) == 0L) {
-    stop("descriptor names chosen model '", chosen_id,
+    stop("descriptor's ", gate_name, " names chosen model '", chosen_id,
          "' but the submitted tuple contains: ", paste(ids, collapse = ", "),
          call. = FALSE)
   }
   if (length(hit) > 1L) {
-    stop("descriptor names chosen model '", chosen_id,
+    stop("descriptor's ", gate_name, " names chosen model '", chosen_id,
          "', which appears more than once in the submitted tuple: ",
          paste(ids, collapse = ", "), call. = FALSE)
   }

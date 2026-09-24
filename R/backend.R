@@ -33,13 +33,27 @@ is_nonempty_name <- function(name) {
 #' @param name Short identifier, e.g. `"nonmem"`.
 #' @param run A function of `(descriptor, model, data_path, ...)` returning a list.
 #'   It is called with the resolved descriptor and the model [chosen_model()]
-#'   picked, so a backend never re-implements descriptor parsing. Integer
+#'   picked FROM THAT SAME descriptor, so a backend never re-implements
+#'   descriptor parsing -- but also never re-derives which one `model` came
+#'   from. [execute()] always calls `run()` with a matched pair; calling a
+#'   backend's `run()` directly (e.g. via [resolve_backend()]) with a `model`
+#'   from a *different* descriptor than the `descriptor` argument is the
+#'   caller's own mismatch to avoid -- `descriptor[["dataset_path"]]` would
+#'   already be wrong for that `model` on this basis alone, the same as
+#'   [resolved_gate(descriptor)][resolved_gate] would be. Integer
 #'   fields on `model` (e.g. `seed`) are ordinarily numeric, but arrive as a
 #'   character string instead if the descriptor's value exceeds 2^53 -- an R
 #'   double can't represent an integer beyond that exactly, so
 #'   [read_descriptor()] preserves the digits as a string rather than
 #'   silently rounding it. Check `is.character()` before doing arithmetic on
-#'   such a field if that's a realistic possibility for your backend.
+#'   such a field if that's a realistic possibility for your backend. `model`
+#'   is exactly the entry [chosen_model()] found in the descriptor's own
+#'   submitted tuple -- nothing added, nothing removed -- so it is safe to
+#'   compare, hash, or forward to an external engine unchanged. Whether an
+#'   empty `covariates` on `model` means "not decided yet" or "confirmed to
+#'   have none" depends on which gate it came from -- call
+#'   [resolved_gate(descriptor)][resolved_gate] rather than re-implementing
+#'   that check.
 #' @param official `TRUE` only if results from this backend may be treated as an
 #'   official, reportable answer. **Defaults to `FALSE`, and that default is the
 #'   point**: a preview engine and a qualified one both return plausible
@@ -142,45 +156,42 @@ resolve_backend <- function(name) {
       # similarly-named field (`seed_source`) would otherwise have that
       # field's value silently reported as the seed in this summary.
       #
-      # `covariates` first, `declared_covariates` as a fallback -- NOT the
-      # other way around. `covariates` is confirmed: chosen_model() resolves
-      # through covariate_search when that gate ran, and a ladder entry's
-      # `covariates` there already holds the real, retained relationships
-      # (e.g. "age:CL"). `declared_covariates` is only ever a candidate list
-      # -- what was proposed for testing, not what a run actually kept (e.g.
-      # v2's `declared_covariates` on the chosen structural candidate lists
-      # sex even though the covariate search that later ran on this exact
-      # descriptor dropped it). Preferring the confirmed field whenever it
-      # has content, rather than always preferring `declared_covariates`
-      # first, is what makes this fallback correct: `covariates` is only
-      # ever empty on a structural_selection entry with no covariate_search
-      # yet (covariate testing hasn't run, so `declared_covariates` -- mere
-      # candidates -- is the only signal available), never once a real
-      # result exists to prefer instead.
+      # covariates: prefer the model's own, confirmed `covariates`
+      # (`length()`, not `is.list()`, so a caller-assigned plain vector isn't
+      # mistaken for absent -- read_descriptor() itself always produces a
+      # list, but nothing stops direct assignment of an atomic one). Fall
+      # back to the candidate `declared_covariates` only when `model` came
+      # from structural_selection: there, an empty `covariates` means "not
+      # decided yet". For a covariate_search model an empty `covariates`
+      # means "confirmed to have none" (e.g. cov-step0) -- falling back there
+      # would misreport untested candidates as if they were kept.
       #
-      # `length(x) > 0L` alone -- no `is.list()` guard -- is the presence
-      # check for `covariates`: it's what correctly treats NULL, an empty
-      # array (`[]`, e.g. on a v2 structural_selection entry), AND an empty
-      # atomic vector all as "not present," without also rejecting a
-      # non-empty ATOMIC vector as if it were absent. `is.list()` would: a
-      # descriptor read via read_descriptor() always has `covariates` as a
-      # list (arrays parse with `simplifyVector = FALSE`), but nothing stops
-      # a caller from assigning a plain character vector directly (the same
-      # way several tests in this package mutate other fields), and
-      # `is.list(c("weight", "age"))` is FALSE even though the data is real.
+      # Which gate `model` came from is asked via resolved_gate(descriptor) --
+      # the same question chosen_model() itself answers to decide which gate
+      # to resolve, shared rather than re-implemented here so the two can't
+      # drift out of sync -- rather than read from anything attached to
+      # `model`. `model` is deliberately left exactly as chosen_model() found
+      # it in the signed record: safe to compare, hash, or forward to a real
+      # backend unchanged. resolved_gate() accepts any list, not just a
+      # classed `focex_descriptor` -- this backend's own `descriptor`
+      # argument only needs `[["covariate_search"]]` to be reachable, and
+      # requiring more would make this branch fail or not depending on
+      # unrelated data (whether `own_covariates` happened to be empty).
       #
-      # NOTE: `would_run$covariates` does not have one consistent shape --
-      # bare candidate names (e.g. "age") from the declared_covariates
-      # fallback, or "param:covariate" relationship strings (e.g. "age:CL")
-      # once covariate_search has resolved a model. A caller can't tell which
-      # it's looking at from the field alone. Left as-is for now: the
-      # `inspect` backend's own contract is a human-facing summary ("reports
-      # what would be executed; runs nothing"), not a stable machine-readable
-      # one, so this is a known, accepted rough edge rather than a fix that's
-      # obviously worth the added shape (e.g. a separate boolean flag) yet.
+      # NOTE: when the fallback fires, `covariates` is bare candidate names
+      # (e.g. "age"); once covariate_search has resolved a model, it's
+      # "param:covariate" relationship strings (e.g. "age:CL") instead. Not
+      # one consistent shape, and a caller can't tell which from the field
+      # alone -- a known, accepted rough edge in this backend's human-facing
+      # summary, not (yet) a stable machine-readable contract.
       own_covariates <- model[["covariates"]]
-      declared <- model[["declared_covariates"]]
-      covariates <- if (length(own_covariates) > 0L) own_covariates else declared
+      covariates <- if (length(own_covariates) > 0L) {
+        own_covariates
+      } else if (resolved_gate(descriptor) == "structural_selection") {
+        model[["declared_covariates"]]
+      } else {
+        NULL
+      }
       list(
         executed = FALSE,
         reason = "the 'inspect' backend runs no estimation",
@@ -188,7 +199,11 @@ resolve_backend <- function(name) {
           model_id = model[["model_id"]],
           compartments = model[["compartments"]],
           error_model = model[["error_model"]],
-          absorption = model[["absorption"]],
+          # `length() == 0L`, not `is.null()`: a v1 model has no absorption
+          # field at all (genuinely absent), but a v2 one could have it
+          # assigned an empty vector rather than NULL -- both mean "nothing
+          # to report", and is.null() alone would only catch the first.
+          absorption = if (length(model[["absorption"]]) == 0L) NULL else model[["absorption"]],
           covariates = unlist(covariates) %||% character(),
           estimation_method = model[["estimation_method"]],
           seed = model[["seed"]],
